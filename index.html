@@ -47,7 +47,7 @@
 </head>
 <body>
 <header>
-  <h1>🔊 Acoustic Modem <span class="dim">· Phase 1 · text</span></h1>
+  <h1>🔊 Acoustic Modem <span class="dim">· Phase 1.1 · text</span></h1>
   <div class="tabs"><button id="tabTx" class="on">Transmit</button><button id="tabRx">Receive</button></div>
 </header>
 <main>
@@ -87,7 +87,7 @@
     <div class="row">
       <button class="primary" id="btnListen">🎙 Start listening</button>
       <button id="btnStopRx" disabled>■ Stop</button>
-      <label>Sync threshold <input type="range" id="thr" min="0.08" max="0.6" step="0.01" value="0.2"> <span id="thrV" class="mono">0.20</span></label>
+      <label>Sync threshold <input type="range" id="thr" min="0.1" max="0.6" step="0.01" value="0.35"> <span id="thrV" class="mono">0.35</span></label>
       <label><input type="checkbox" id="zoom" checked> Zoom to band</label>
       <label>Floor <input type="range" id="floor" min="-140" max="-60" step="5" value="-120"></label>
     </div>
@@ -96,7 +96,7 @@
     <div class="metrics">
       <div class="m"><div class="k">State</div><div class="v" id="mState">idle</div></div>
       <div class="m"><div class="k">Sample rate</div><div class="v" id="mFs">—</div></div>
-      <div class="m"><div class="k">Sync NCC (live / peak)</div><div class="v" id="mNcc">—</div></div>
+      <div class="m"><div class="k">Sync NCC live / peak · thr</div><div class="v" id="mNcc">—</div></div>
       <div class="m"><div class="k">In-band peak − floor</div><div class="v" id="mBand">—</div></div>
       <div class="m"><div class="k">Last pkt symbol SNR avg/min</div><div class="v" id="mSnr">—</div></div>
       <div class="m"><div class="k">Last pkt blocks / RS fixes</div><div class="v" id="mBlk">—</div></div>
@@ -133,6 +133,8 @@ const SPEEDS = {               // ts = integration window, tg = guard (echo abso
   robust:   { name: 'Robust (32+12 ms)',  ts: 0.032, tg: 0.012 },
   standard: { name: 'Standard (24+8 ms)', ts: 0.024, tg: 0.008 },
   fast:     { name: 'Fast (16+6 ms)',     ts: 0.016, tg: 0.006 },
+  turbo:    { name: 'Turbo (12+4 ms)',    ts: 0.012, tg: 0.004 },
+  max:      { name: 'Max (8+4 ms)',       ts: 0.008, tg: 0.004 },
 };
 const FRAME = {
   version: 1,
@@ -421,7 +423,8 @@ function airtime(p, payloadLen) {
 class Receiver {
   constructor(p, opts = {}) {
     this.p = p;
-    this.threshold = opts.threshold ?? 0.2;
+    this.threshold = opts.threshold ?? 0.35;   // field logs: room-noise peaks 0.20–0.21, real chirps 0.59–0.90
+    this.noiseNcc = 0;                         // slow average of per-hop max NCC when no chirp is present
     this.on = opts.onEvent || (() => {});
     this.R = 1 << 21; this.mask = this.R - 1; this.buf = new Float32Array(this.R); this.total = 0;
     this.L = p.chirpLen; this.HOP = 8192; this.N = nextPow2(this.HOP + this.L);
@@ -451,6 +454,8 @@ class Receiver {
     this.cursor = 0; this.state = 'search'; this.deferred = false; this.lastNcc = 0; this.pk = null;
   }
   get(i) { return this.buf[i & this.mask]; }
+  /** Effective sync threshold: user floor, raised automatically in rooms with structured noise. */
+  effThr() { return Math.min(0.6, Math.max(this.threshold, 2.0 * this.noiseNcc)); }
   push(chunk) {
     for (let i = 0; i < chunk.length; i++) this.buf[(this.total + i) & this.mask] = chunk[i];
     this.total += chunk.length;
@@ -491,7 +496,9 @@ class Receiver {
       if (v > best) { best = v; bi = k; }
     }
     this.lastNcc = best;
-    if (best >= this.threshold) {
+    const thr = this.effThr();
+    if (best < thr) this.noiseNcc = this.noiseNcc ? 0.97 * this.noiseNcc + 0.03 * best : best;
+    if (best >= thr) {
       if (bi > HOP - L / 2 && !this.deferred) { this.cursor += Math.max(1, bi - (L >> 1)); this.deferred = true; return; }
       this.deferred = false;
       this._startPacket(this.cursor + bi, best);
@@ -759,7 +766,7 @@ let peakNcc = 0, logEntries = [], current = null;
 function log(msg, cls, data) {
   const line = document.createElement('div'); if (cls) line.className = cls;
   line.textContent = `${new Date().toLocaleTimeString()}  ${msg}`; $('log').appendChild(line); $('log').scrollTop = 1e9;
-  if (data) logEntries.push(Object.assign({ t: new Date().toISOString() }, data));
+  if (data) logEntries.push(Object.assign({ t: new Date().toISOString() }, rx && data.event !== 'start' ? { band: rx.p.bandKey, speed: rx.p.speedKey, thr: +rx.effThr().toFixed(3), noiseNcc: +rx.noiseNcc.toFixed(3) } : {}, data));
 }
 const fmt = (x) => (x == null || !isFinite(x) ? '—' : x.toFixed(1));
 function onEvent(e) {
@@ -804,7 +811,7 @@ function onEvent(e) {
 function concat(arrs) { const n = arrs.reduce((s, a) => s + a.length, 0), o = new Uint8Array(n); let k = 0; for (const a of arrs) { o.set(a, k); k += a.length; } return o; }
 
 function makeReceiver(fs) { rx = new M.Receiver(params(fs), { threshold: +$('thr').value, onEvent }); $('mFs').textContent = `${fs} Hz`; }
-function restartReceiver() { makeReceiver(ctx.sampleRate); log(`receiver reset: ${$('band').value} / ${$('speed').value}`, 'dim'); }
+function restartReceiver() { makeReceiver(ctx.sampleRate); log(`receiver reset: ${$('band').value} / ${$('speed').value}`, 'dim', { event: 'reset' }); }
 $('thr').oninput = () => { $('thrV').textContent = (+$('thr').value).toFixed(2); if (rx) rx.threshold = +$('thr').value; };
 
 const WORKLET = `class Tap extends AudioWorkletProcessor {
@@ -908,7 +915,8 @@ function draw() {
   vals.sort((a, b) => a - b);
   $('mBand').textContent = `${(pk - vals[vals.length >> 1]).toFixed(1)} dB`;
   peakNcc = Math.max(peakNcc * 0.995, rx.lastNcc);
-  $('mNcc').innerHTML = `${rx.lastNcc.toFixed(2)} / <span class="${peakNcc >= rx.threshold ? 'ok' : ''}">${peakNcc.toFixed(2)}</span>`;
+  const et = rx.effThr();
+  $('mNcc').innerHTML = `${rx.lastNcc.toFixed(2)} / <span class="${peakNcc >= et ? 'ok' : ''}">${peakNcc.toFixed(2)}</span> <span class="dim" style="font-size:12px">· ${et.toFixed(2)}</span>`;
   const pr = rx.progress();
   $('mState').textContent = pr ? (pr.phase === 'header' ? 'header…' : 'receiving') : 'searching';
   $('rxBar').style.width = pr ? (pr.got / pr.need * 100) + '%' : '0%';
@@ -916,11 +924,23 @@ function draw() {
 
 // ------------------------------------------------------------ RX tools
 function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+function summarize() {
+  const by = {};
+  for (const e of logEntries) {
+    if (!e.band) continue;
+    const k = `${e.band}/${e.speed}`, s = by[k] || (by[k] = { syncs: 0, headerFails: 0, packets: 0, packetsOk: 0, blocks: 0, blocksOk: 0, snrAvg: [], snrMin: [], realNcc: [], falseNcc: [] });
+    if (e.event === 'sync') s.syncs++;
+    if (e.event === 'header_fail') { s.headerFails++; s.falseNcc.push(e.ncc); }
+    if (e.event === 'block') { s.blocks++; if (e.ok) s.blocksOk++; }
+    if (e.event === 'packet') { s.packets++; if (e.ok) s.packetsOk++; s.snrAvg.push(e.snrAvg); s.snrMin.push(e.snrMin); s.realNcc.push(e.ncc); }
+  }
+  return by;
+}
 $('btnLog').onclick = () => {
   const p = rx ? rx.p : params();
   const out = { app: 'amodem-phase1', exported: new Date().toISOString(), ua: navigator.userAgent,
     params: { band: p.bandKey, speed: p.speedKey, fs: p.fs, tones: [p.tones[0], p.tones[15]], ts: p.ts, tg: p.tg, threshold: rx ? rx.threshold : null },
-    events: logEntries };
+    summary: summarize(), events: logEntries };
   download(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), `amodem_log_${Date.now()}.json`);
 };
 $('btnRec').onclick = () => {
