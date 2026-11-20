@@ -167,9 +167,9 @@
 // ---------------------------------------------------------------- parameters
 const NTONES = 16;               // 16-MFSK -> 4 bits / symbol
 const BANDS = {
-  ultra: { name: 'Near-ultrasonic 17.0–18.9 kHz', base: 17000, spacing: 125 },
-  upper: { name: 'Upper-audible 15.0–16.9 kHz',  base: 15000, spacing: 125 },
-  debug: { name: 'Audible debug 2.0–3.9 kHz',    base: 2000,  spacing: 125 },
+  ultra: { name: 'Near-ultrasonic 17.0–18.9 kHz', base: 17000, spacing: 120 },
+  upper: { name: 'Upper-audible 15.0–16.9 kHz',  base: 15000, spacing: 120},
+  debug: { name: 'Audible debug 2.0–3.9 kHz',    base: 2000,  spacing: 120 },
 };
 const SPEEDS = {               // ts = integration window, tg = guard (echo absorber)
   robust:   { name: 'Robust (32+12 ms)',  ts: 0.032, tg: 0.012 },
