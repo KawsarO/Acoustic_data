@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acoustic Modem — Phase 1 (Text)</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#0e1116; --card:#171b22; --line:#2a313c; --fg:#e6e9ef; --dim:#8b95a5; --acc:#4cc2ff; --ok:#3ddc84; --bad:#ff5d5d; --warn:#ffc04d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; font-weight:600; }
+  .tabs { display:flex; gap:6px; margin-left:auto; }
+  .tabs button { padding:8px 18px; font-weight:600; }
+  .tabs button.on { background:var(--acc); color:#001826; border-color:var(--acc); }
+  main { max-width:1100px; margin:0 auto; padding:16px; display:grid; gap:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0 0 10px; font-weight:600; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  label { color:var(--dim); font-size:13px; display:flex; gap:6px; align-items:center; }
+  select, input[type=number], textarea, button { background:#0f1318; color:var(--fg); border:1px solid var(--line); border-radius:7px; padding:7px 10px; font:inherit; }
+  button { cursor:pointer; }
+  button.primary { background:var(--acc); color:#001826; border-color:var(--acc); font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  textarea { width:100%; min-height:90px; resize:vertical; }
+  .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
+  .params { color:var(--dim); margin-top:8px; white-space:pre-wrap; }
+  canvas { width:100%; display:block; background:#05070a; border-radius:6px; }
+  #spec { height:170px; } #wf { height:240px; margin-top:6px; }
+  .metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:8px; margin-top:10px; }
+  .m { background:#0f1318; border:1px solid var(--line); border-radius:7px; padding:8px 10px; }
+  .m .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .m .v { font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .bar { height:6px; background:#0f1318; border-radius:3px; overflow:hidden; margin-top:8px; }
+  .bar > div { height:100%; width:0; background:var(--acc); transition:width .1s; }
+  .msgs { display:grid; gap:8px; max-height:260px; overflow:auto; }
+  .msg { border-left:3px solid var(--ok); background:#0f1318; padding:8px 10px; border-radius:0 7px 7px 0; white-space:pre-wrap; word-break:break-word; }
+  .msg.partial { border-color:var(--warn); }
+  .msg .meta { color:var(--dim); font-size:11px; margin-top:4px; }
+  pre#log { max-height:220px; overflow:auto; margin:0; background:#0f1318; border:1px solid var(--line); border-radius:7px; padding:8px; white-space:pre-wrap; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); } .dim { color:var(--dim); }
+  .hide { display:none !important; }
+  .note { font-size:12px; color:var(--dim); }
+  .filebtn { border:1px solid var(--line); padding:7px 10px; border-radius:7px; color:var(--fg); cursor:pointer; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔊 Acoustic Modem <span class="dim">· Phase 1 · text</span></h1>
+  <div class="tabs"><button id="tabTx" class="on">Transmit</button><button id="tabRx">Receive</button></div>
+</header>
+<main>
+  <section class="card">
+    <h2>Link settings <span class="dim" style="text-transform:none;letter-spacing:0">(must match on both devices)</span></h2>
+    <div class="row">
+      <label>Band <select id="band"></select></label>
+      <label>Speed <select id="speed"></select></label>
+    </div>
+    <div class="params mono" id="paramsInfo"></div>
+    <div id="secureWarn" class="note bad hide" style="margin-top:8px">⚠ This page is not in a secure context (HTTPS or localhost), so the browser will block the microphone. Transmitting still works.</div>
+  </section>
+
+  <!-- ============================== TX -->
+  <section id="txPanel" class="card">
+    <h2>Transmitter</h2>
+    <textarea id="txText" placeholder="Type a message…">Hello from the acoustic modem 👋</textarea>
+    <div class="row" style="margin-top:8px"><span class="mono" id="txInfo"></span></div>
+    <div class="row" style="margin-top:10px">
+      <label>Volume <input type="range" id="vol" min="0.05" max="1" step="0.05" value="0.7"> <span id="volV" class="mono">0.70</span></label>
+      <label><input type="checkbox" id="repeat"> Repeat every <input type="number" id="repeatGap" value="3" min="1" max="60" style="width:56px"> s</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="btnSend">▶ Transmit</button>
+      <button id="btnStopTx" disabled>■ Stop</button>
+      <button id="btnWav">⬇ Download WAV</button>
+      <button id="btnSelfTest">Self-test (simulated room)</button>
+    </div>
+    <div class="bar"><div id="txBar"></div></div>
+    <pre id="txOut" class="mono dim" style="margin:10px 0 0; white-space:pre-wrap"></pre>
+    <p class="note">Tip: set the device volume to ~70–90%. If you hear crackle or chirping in ultrasonic mode, the speaker is clipping, so lower the volume slider.</p>
+  </section>
+
+  <!-- ============================== RX -->
+  <section id="rxPanel" class="card hide">
+    <h2>Receiver</h2>
+    <div class="row">
+      <button class="primary" id="btnListen">🎙 Start listening</button>
+      <button id="btnStopRx" disabled>■ Stop</button>
+      <label>Sync threshold <input type="range" id="thr" min="0.08" max="0.6" step="0.01" value="0.2"> <span id="thrV" class="mono">0.20</span></label>
+      <label><input type="checkbox" id="zoom" checked> Zoom to band</label>
+      <label>Floor <input type="range" id="floor" min="-140" max="-60" step="5" value="-120"></label>
+    </div>
+    <canvas id="spec" style="margin-top:10px"></canvas>
+    <canvas id="wf"></canvas>
+    <div class="metrics">
+      <div class="m"><div class="k">State</div><div class="v" id="mState">idle</div></div>
+      <div class="m"><div class="k">Sample rate</div><div class="v" id="mFs">—</div></div>
+      <div class="m"><div class="k">Sync NCC (live / peak)</div><div class="v" id="mNcc">—</div></div>
+      <div class="m"><div class="k">In-band peak − floor</div><div class="v" id="mBand">—</div></div>
+      <div class="m"><div class="k">Last pkt symbol SNR avg/min</div><div class="v" id="mSnr">—</div></div>
+      <div class="m"><div class="k">Last pkt blocks / RS fixes</div><div class="v" id="mBlk">—</div></div>
+    </div>
+    <div class="bar"><div id="rxBar"></div></div>
+    <h2 style="margin-top:14px">Received</h2>
+    <div class="msgs" id="msgs"><div class="dim">Nothing yet.</div></div>
+    <h2 style="margin-top:14px">Log</h2>
+    <pre id="log"></pre>
+    <div class="row" style="margin-top:8px">
+      <button id="btnLog">⬇ Download log (JSON)</button>
+      <button id="btnRec">⬇ Save last 20 s audio (WAV)</button>
+      <label class="filebtn"><input type="file" id="wavIn" accept="audio/*,.wav" style="display:none">📂 Decode audio file…</label>
+      <button id="btnClear">Clear</button>
+    </div>
+    <p class="note">Mic processing (echo cancellation, noise suppression, auto-gain) is requested OFF. Those filters remove ultrasonic tones. Symbol SNR above ~13 dB decodes reliably. Below ~10 dB, expect failed blocks.</p>
+  </section>
+</main>
+
+<script>
+/* Acoustic modem core — chirp sync, 16-MFSK (continuous phase), RS(255) FEC, CRC-16.
+ * Runs in the browser (window.Modem) and in Node (globalThis.Modem). No dependencies. */
+(function (root) {
+'use strict';
+
+// ---------------------------------------------------------------- parameters
+const NTONES = 16;               // 16-MFSK -> 4 bits / symbol
+const BANDS = {
+  ultra: { name: 'Near-ultrasonic 17.0–18.9 kHz', base: 17000, spacing: 125 },
+  upper: { name: 'Upper-audible 15.0–16.9 kHz',  base: 15000, spacing: 125 },
+  debug: { name: 'Audible debug 2.0–3.9 kHz',    base: 2000,  spacing: 125 },
+};
+const SPEEDS = {               // ts = integration window, tg = guard (echo absorber)
+  robust:   { name: 'Robust (32+12 ms)',  ts: 0.032, tg: 0.012 },
+  standard: { name: 'Standard (24+8 ms)', ts: 0.024, tg: 0.008 },
+  fast:     { name: 'Fast (16+6 ms)',     ts: 0.016, tg: 0.006 },
+};
+const FRAME = {
+  version: 1,
+  chirpDur: 0.100,   // preamble sweep length (s)
+  preGap: 0.020,     // silence after chirp so its echoes die before data
+  lead: 0.050, tail: 0.080,
+  hdrInfo: 10,       // 8 header bytes + CRC-16
+  hdrPar: 8,         // RS parity on header (corrects 4 byte errors / 8 erasures)
+  blkData: 32,       // payload bytes per data block
+  blkPar: 12,        // RS parity per block (corrects 6 byte errors / 12 erasures)
+  maxText: 255,      // Phase 1 cap (single preamble; keeps clock drift < guard)
+};
+const TYPE = { TEXT: 0, IMAGE: 1 };
+const HDR_SYMS = (FRAME.hdrInfo + FRAME.hdrPar) * 2;
+
+function makeParams(bandKey, speedKey, fs) {
+  const b = BANDS[bandKey], s = SPEEDS[speedKey];
+  const tones = [];
+  for (let i = 0; i < NTONES; i++) tones.push(b.base + i * b.spacing);
+  return {
+    fs, bandKey, speedKey, tones, spacing: b.spacing,
+    chirpF0: b.base - b.spacing, chirpF1: b.base + NTONES * b.spacing,
+    chirpLen: Math.round(FRAME.chirpDur * fs),
+    gapLen: Math.round(FRAME.preGap * fs),
+    slot: (s.ts + s.tg) * fs,            // fractional samples per symbol slot
+    guard: s.tg * fs,
+    win: Math.round(s.ts * fs),
+    ts: s.ts, tg: s.tg,
+    baud: 1 / (s.ts + s.tg),
+    rawBps: 4 / (s.ts + s.tg),
+  };
+}
+
+// ---------------------------------------------------------------- GF(256)
+const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+(function () { let x = 1; for (let i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+  for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255]; })();
+const gmul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+const gdiv = (a, b) => { if (!b) throw new Error('div0'); return a ? EXP[(LOG[a] + 255 - LOG[b]) % 255] : 0; };
+const gpow = (a, p) => EXP[(((LOG[a] * p) % 255) + 255) % 255];
+const ginv = (a) => EXP[255 - LOG[a]];
+function pScale(p, x) { return p.map(c => gmul(c, x)); }
+function pAdd(p, q) {
+  const r = new Array(Math.max(p.length, q.length)).fill(0);
+  for (let i = 0; i < p.length; i++) r[i + r.length - p.length] = p[i];
+  for (let i = 0; i < q.length; i++) r[i + r.length - q.length] ^= q[i];
+  return r;
+}
+function pMul(p, q) {
+  const r = new Array(p.length + q.length - 1).fill(0);
+  for (let j = 0; j < q.length; j++) for (let i = 0; i < p.length; i++) r[i + j] ^= gmul(p[i], q[j]);
+  return r;
+}
+function pEval(p, x) { let y = p[0]; for (let i = 1; i < p.length; i++) y = gmul(y, x) ^ p[i]; return y; }
+function pDivRem(dividend, divisor) {
+  const out = dividend.slice();
+  for (let i = 0; i < dividend.length - (divisor.length - 1); i++) {
+    const c = out[i];
+    if (c) for (let j = 1; j < divisor.length; j++) if (divisor[j]) out[i + j] ^= gmul(divisor[j], c);
+  }
+  return out.slice(out.length - (divisor.length - 1));
+}
+
+// ---------------------------------------------------------------- Reed-Solomon
+const genCache = {};
+function rsGen(nsym) {
+  if (genCache[nsym]) return genCache[nsym];
+  let g = [1];
+  for (let i = 0; i < nsym; i++) g = pMul(g, [1, gpow(2, i)]);
+  return (genCache[nsym] = g);
+}
+function rsEncode(msg, nsym) {
+  const g = rsGen(nsym);
+  const out = new Array(msg.length + nsym).fill(0);
+  for (let i = 0; i < msg.length; i++) out[i] = msg[i];
+  for (let i = 0; i < msg.length; i++) {
+    const c = out[i];
+    if (c) for (let j = 1; j < g.length; j++) out[i + j] ^= gmul(g[j], c);
+  }
+  for (let i = 0; i < msg.length; i++) out[i] = msg[i];
+  return out;
+}
+function rsSyndromes(msg, nsym) {
+  const s = [0];
+  for (let i = 0; i < nsym; i++) s.push(pEval(msg, gpow(2, i)));
+  return s;
+}
+function rsErrataLocator(coefPos) {
+  let loc = [1];
+  for (const i of coefPos) loc = pMul(loc, pAdd([1], [gpow(2, i), 0]));
+  return loc;
+}
+function rsCorrectErrata(msg, synd, errPos) {
+  const coefPos = errPos.map(p => msg.length - 1 - p);
+  const errLoc = rsErrataLocator(coefPos);
+  const sr = synd.slice().reverse();
+  const rem = pDivRem(pMul(sr, errLoc), [1].concat(new Array(errLoc.length).fill(0)));
+  const errEval = rem.reverse();
+  const X = coefPos.map(cp => gpow(2, cp));
+  const E = new Array(msg.length).fill(0);
+  for (let i = 0; i < X.length; i++) {
+    const XiInv = ginv(X[i]);
+    let prime = 1;
+    for (let j = 0; j < X.length; j++) if (j !== i) prime = gmul(prime, 1 ^ gmul(XiInv, X[j]));
+    if (prime === 0) throw new Error('forney');
+    const y = gmul(X[i], pEval(errEval.slice().reverse(), XiInv));
+    E[errPos[i]] = gdiv(y, prime);
+  }
+  return pAdd(msg, E);
+}
+function rsForneySyndromes(synd, pos, n) {
+  const f = synd.slice(1);
+  for (const p of pos) {
+    const x = gpow(2, n - 1 - p);
+    for (let j = 0; j < f.length - 1; j++) f[j] = gmul(f[j], x) ^ f[j + 1];
+  }
+  return f;
+}
+function rsErrorLocator(synd, nsym, eraseCount) {
+  let errLoc = [1], oldLoc = [1];
+  const shift = synd.length > nsym ? synd.length - nsym : 0;
+  for (let i = 0; i < nsym - eraseCount; i++) {
+    const K = i + shift;
+    let delta = synd[K];
+    for (let j = 1; j < errLoc.length; j++) delta ^= gmul(errLoc[errLoc.length - 1 - j], synd[K - j]);
+    oldLoc = oldLoc.concat([0]);
+    if (delta) {
+      if (oldLoc.length > errLoc.length) {
+        const nl = pScale(oldLoc, delta);
+        oldLoc = pScale(errLoc, ginv(delta));
+        errLoc = nl;
+      }
+      errLoc = pAdd(errLoc, pScale(oldLoc, delta));
+    }
+  }
+  while (errLoc.length && errLoc[0] === 0) errLoc.shift();
+  if ((errLoc.length - 1 - eraseCount) * 2 + eraseCount > nsym) throw new Error('too many errors');
+  return errLoc;
+}
+function rsFindErrors(errLocRev, n) {
+  const errs = errLocRev.length - 1, pos = [];
+  for (let i = 0; i < n; i++) if (pEval(errLocRev, gpow(2, i)) === 0) pos.push(n - 1 - i);
+  if (pos.length !== errs) throw new Error('chien');
+  return pos;
+}
+/** Decode a codeword (array of bytes). Returns the corrected full codeword or throws. */
+function rsDecode(cw, nsym, erasePos) {
+  erasePos = erasePos || [];
+  if (erasePos.length > nsym) throw new Error('too many erasures');
+  let msg = Array.from(cw);
+  for (const e of erasePos) msg[e] = 0;
+  let synd = rsSyndromes(msg, nsym);
+  if (Math.max(...synd) === 0) return msg;
+  const fs = rsForneySyndromes(synd, erasePos, msg.length);
+  const errLoc = rsErrorLocator(fs, nsym, erasePos.length);
+  const errPos = rsFindErrors(errLoc.slice().reverse(), msg.length);
+  msg = rsCorrectErrata(msg, synd, erasePos.concat(errPos));
+  synd = rsSyndromes(msg, nsym);
+  if (Math.max(...synd) !== 0) throw new Error('uncorrectable');
+  return msg;
+}
+/** Soft decode: errors-only first, then mark the least-confident bytes as erasures. */
+function rsDecodeSoft(cw, nsym, conf, validate) {
+  const attempt = (er) => {
+    try { const out = rsDecode(cw, nsym, er); if (validate(out)) return out; } catch (e) { /* try next */ }
+    return null;
+  };
+  let out = attempt([]), er = 0;
+  if (!out) {
+    const order = conf.map((c, i) => i).sort((a, b) => conf[a] - conf[b]);
+    for (er = 2; er <= nsym && !out; er += 2) out = attempt(order.slice(0, er));
+    er -= 2;
+  }
+  if (!out) return null;
+  let corrected = 0;
+  for (let i = 0; i < cw.length; i++) if (cw[i] !== out[i]) corrected++;
+  return { cw: out, corrected, erasures: er };
+}
+
+// ---------------------------------------------------------------- CRC-16/CCITT-FALSE
+function crc16(b, start = 0, end = b.length) {
+  let c = 0xffff;
+  for (let i = start; i < end; i++) {
+    c ^= b[i] << 8;
+    for (let k = 0; k < 8; k++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xffff : (c << 1) & 0xffff;
+  }
+  return c;
+}
+
+// ---------------------------------------------------------------- FFT (radix-2, in place)
+function fft(re, im, inverse) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (inverse ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+      }
+    }
+  }
+  if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+}
+const nextPow2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
+
+// ---------------------------------------------------------------- TX
+function makeChirp(p) {
+  const L = p.chirpLen, T = L / p.fs, k = (p.chirpF1 - p.chirpF0) / T, out = new Float32Array(L);
+  const taper = Math.round(L * 0.05);
+  for (let n = 0; n < L; n++) {
+    const t = n / p.fs;
+    let w = 1;
+    if (n < taper) w = 0.5 - 0.5 * Math.cos(Math.PI * n / taper);
+    else if (n >= L - taper) w = 0.5 - 0.5 * Math.cos(Math.PI * (L - 1 - n) / taper);
+    out[n] = w * Math.sin(2 * Math.PI * (p.chirpF0 * t + 0.5 * k * t * t));
+  }
+  return out;
+}
+
+function blockLayout(len) {
+  const blocks = [];
+  let sym = HDR_SYMS;
+  for (let off = 0; off < len; off += FRAME.blkData) {
+    const dlen = Math.min(FRAME.blkData, len - off);
+    const nbytes = dlen + 2 + FRAME.blkPar;
+    blocks.push({ off, dlen, nbytes, startSym: sym, endSym: sym + nbytes * 2 });
+    sym += nbytes * 2;
+  }
+  return { blocks, totalSyms: sym };
+}
+
+/** Build on-air bytes: header codeword followed by data block codewords. */
+function buildFrame(type, payload, meta = [0, 0, 0, 0]) {
+  const len = payload.length;
+  const h = [(FRAME.version << 4) | type, len >> 8, len & 255, FRAME.blkData, meta[0] | 0, meta[1] | 0, meta[2] | 0, meta[3] | 0];
+  const hc = crc16(h); h.push(hc >> 8, hc & 255);
+  let out = rsEncode(h, FRAME.hdrPar);
+  for (const b of blockLayout(len).blocks) {
+    const d = Array.from(payload.subarray(b.off, b.off + b.dlen));
+    const c = crc16(d); d.push(c >> 8, c & 255);
+    out = out.concat(rsEncode(d, FRAME.blkPar));
+  }
+  return Uint8Array.from(out);
+}
+function bytesToSymbols(bytes) {
+  const s = new Uint8Array(bytes.length * 2);
+  for (let i = 0; i < bytes.length; i++) { s[2 * i] = bytes[i] >> 4; s[2 * i + 1] = bytes[i] & 15; }
+  return s;
+}
+function synthesize(p, frameBytes, amp = 0.7) {
+  const syms = bytesToSymbols(frameBytes);
+  const lead = Math.round(FRAME.lead * p.fs), tail = Math.round(FRAME.tail * p.fs);
+  const dataStart = lead + p.chirpLen + p.gapLen;
+  const dataLen = Math.ceil(syms.length * p.slot);
+  const out = new Float32Array(dataStart + dataLen + tail);
+  const ch = makeChirp(p);
+  for (let i = 0; i < ch.length; i++) out[lead + i] = amp * ch[i];
+  const ramp = Math.round(0.004 * p.fs);
+  let phase = 0;
+  for (let n = 0; n < dataLen; n++) {
+    const si = Math.min(syms.length - 1, Math.floor(n / p.slot));
+    phase += 2 * Math.PI * p.tones[syms[si]] / p.fs;      // continuous phase: no clicks between symbols
+    if (phase > 1e4) phase %= 2 * Math.PI;
+    let w = 1;
+    if (n < ramp) w = 0.5 - 0.5 * Math.cos(Math.PI * n / ramp);
+    else if (n >= dataLen - ramp) w = 0.5 - 0.5 * Math.cos(Math.PI * (dataLen - 1 - n) / ramp);
+    out[dataStart + n] = amp * w * Math.sin(phase);
+  }
+  return out;
+}
+function airtime(p, payloadLen) {
+  const { totalSyms } = blockLayout(payloadLen);
+  return FRAME.lead + FRAME.chirpDur + FRAME.preGap + totalSyms * (p.ts + p.tg) + FRAME.tail;
+}
+
+// ---------------------------------------------------------------- RX
+class Receiver {
+  constructor(p, opts = {}) {
+    this.p = p;
+    this.threshold = opts.threshold ?? 0.2;
+    this.on = opts.onEvent || (() => {});
+    this.R = 1 << 21; this.mask = this.R - 1; this.buf = new Float32Array(this.R); this.total = 0;
+    this.L = p.chirpLen; this.HOP = 8192; this.N = nextPow2(this.HOP + this.L);
+    const tpl = makeChirp(p);
+    this.Tre = new Float64Array(this.N); this.Tim = new Float64Array(this.N);
+    let e = 0; for (let i = 0; i < tpl.length; i++) { this.Tre[i] = tpl[i]; e += tpl[i] * tpl[i]; }
+    this.tnorm = Math.sqrt(e);
+    fft(this.Tre, this.Tim, false);
+    this.re = new Float64Array(this.N); this.im = new Float64Array(this.N);
+    this.bre = new Float64Array(this.N); this.bim = new Float64Array(this.N);
+    this.bp = new Float64Array(this.N);                  // soft band-pass around the chirp band
+    const lo = p.chirpF0 - 250, hi = p.chirpF1 + 250, edge = 250;
+    for (let k = 0; k <= this.N / 2; k++) {
+      const f = k * p.fs / this.N;
+      let g = 0;
+      if (f >= lo && f <= hi) g = 1;
+      else if (f > lo - edge && f < lo) g = 0.5 - 0.5 * Math.cos(Math.PI * (f - (lo - edge)) / edge);
+      else if (f > hi && f < hi + edge) g = 0.5 + 0.5 * Math.cos(Math.PI * (f - hi) / edge);
+      this.bp[k] = g; if (k > 0 && k < this.N / 2) this.bp[this.N - k] = g;
+    }
+    this.pre = new Float64Array(this.HOP + this.L);
+    this.hann = new Float64Array(p.win);
+    for (let i = 0; i < p.win; i++) this.hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (p.win - 1));
+    this.coef = p.tones.map(f => 2 * Math.cos(2 * Math.PI * f / p.fs));
+    this.tmp = new Float64Array(p.win);
+    this.E = new Float64Array(NTONES);
+    this.cursor = 0; this.state = 'search'; this.deferred = false; this.lastNcc = 0; this.pk = null;
+  }
+  get(i) { return this.buf[i & this.mask]; }
+  push(chunk) {
+    for (let i = 0; i < chunk.length; i++) this.buf[(this.total + i) & this.mask] = chunk[i];
+    this.total += chunk.length;
+    if (this.total - this.cursor > this.R - this.N) this.cursor = this.total - this.HOP - this.L; // fell behind
+    for (;;) {
+      if (this.state === 'search') {
+        if (this.total >= this.cursor + this.HOP + this.L) this._search(); else return;
+      } else if (!this._packetStep()) return;
+    }
+  }
+  progress() {
+    if (this.state !== 'packet' || !this.pk) return null;
+    const need = this.pk.phase === 'header' ? HDR_SYMS : this.pk.layout.totalSyms;
+    return { got: this.pk.syms.length, need, phase: this.pk.phase };
+  }
+  _search() {
+    const { N, L, HOP, re, im, pre } = this;
+    const n = HOP + L - 1;
+    re.fill(0); im.fill(0);
+    for (let j = 0; j < n; j++) re[j] = this.get(this.cursor + j);
+    fft(re, im, false);
+    // Band-pass in the frequency domain so out-of-band room noise (speech, HVAC) does not dilute the NCC.
+    const { bre, bim, bp } = this;
+    for (let k = 0; k < N; k++) {
+      const a = re[k] * bp[k], b = im[k] * bp[k];
+      bre[k] = a; bim[k] = b;
+      const c = this.Tre[k], d = this.Tim[k];                // X * conj(T)
+      re[k] = a * c + b * d; im[k] = b * c - a * d;
+    }
+    fft(bre, bim, true);
+    for (let j = 0; j < n; j++) pre[j + 1] = pre[j] + bre[j] * bre[j];
+    fft(re, im, true);
+    let best = 0, bi = -1;
+    for (let k = 0; k < HOP; k++) {
+      const E = pre[k + L] - pre[k];
+      if (E < 1e-10) continue;
+      const v = re[k] / (this.tnorm * Math.sqrt(E));
+      if (v > best) { best = v; bi = k; }
+    }
+    this.lastNcc = best;
+    if (best >= this.threshold) {
+      if (bi > HOP - L / 2 && !this.deferred) { this.cursor += Math.max(1, bi - (L >> 1)); this.deferred = true; return; }
+      this.deferred = false;
+      this._startPacket(this.cursor + bi, best);
+    } else { this.cursor += HOP; this.deferred = false; }
+  }
+  _startPacket(a, ncc) {
+    this.pk = { a, ncc, dataStart: a + this.L + this.p.gapLen, syms: [], snr: [], conf: [], phase: 'header',
+                blocks: [], nextBlock: 0, t0: Date.now() };
+    this.state = 'packet';
+    this.on({ type: 'sync', sample: a, ncc });
+  }
+  _demod(i) {
+    const p = this.p, start = Math.round(this.pk.dataStart + i * p.slot + p.guard);
+    const x = this.tmp, E = this.E;
+    for (let n = 0; n < p.win; n++) x[n] = this.get(start + n) * this.hann[n];
+    let m1 = -1, m2 = -1, s = 0, sum = 0;
+    for (let t = 0; t < NTONES; t++) {
+      const c = this.coef[t]; let s1 = 0, s2 = 0;
+      for (let n = 0; n < p.win; n++) { const s0 = x[n] + c * s1 - s2; s2 = s1; s1 = s0; }
+      E[t] = s1 * s1 + s2 * s2 - c * s1 * s2; sum += E[t];
+      if (m1 < 0 || E[t] > E[m1]) { m2 = m1; m1 = t; } else if (m2 < 0 || E[t] > E[m2]) m2 = t;
+    }
+    s = m1;
+    const others = (sum - E[m1]) / (NTONES - 1) + 1e-20;
+    return { sym: s, snr: 10 * Math.log10(E[m1] / others + 1e-20), conf: 10 * Math.log10(E[m1] / (E[m2] + 1e-20) + 1e-20) };
+  }
+  _packetStep() {
+    const pk = this.pk, p = this.p, i = pk.syms.length;
+    const end = Math.round(pk.dataStart + i * p.slot + p.guard) + p.win;
+    if (end > this.total) return false;
+    const d = this._demod(i);
+    pk.syms.push(d.sym); pk.snr.push(d.snr); pk.conf.push(d.conf);
+    if (pk.phase === 'header' && pk.syms.length === HDR_SYMS) this._decodeHeader();
+    else if (pk.phase === 'data' && pk.syms.length === pk.layout.blocks[pk.nextBlock].endSym) this._decodeBlock();
+    return true;
+  }
+  _bytes(s0, s1) {
+    const pk = this.pk, bytes = [], conf = [];
+    for (let i = s0; i < s1; i += 2) {
+      bytes.push((pk.syms[i] << 4) | pk.syms[i + 1]);
+      conf.push(Math.min(pk.conf[i], pk.conf[i + 1]));
+    }
+    return { bytes, conf };
+  }
+  _decodeHeader() {
+    const pk = this.pk;
+    const { bytes, conf } = this._bytes(0, HDR_SYMS);
+    const r = rsDecodeSoft(bytes, FRAME.hdrPar, conf, (cw) =>
+      crc16(cw, 0, 8) === ((cw[8] << 8) | cw[9]) && (cw[0] >> 4) === FRAME.version && (cw[0] & 15) <= 1 && cw[3] === FRAME.blkData);
+    const snr = avg(pk.snr);
+    if (!r) {
+      this.on({ type: 'header_fail', sample: pk.a, ncc: pk.ncc, snrAvg: snr, snrMin: Math.min(...pk.snr) });
+      this.state = 'search'; this.cursor = pk.a + this.L; this.pk = null; return;
+    }
+    const h = r.cw;
+    pk.type = h[0] & 15; pk.len = (h[1] << 8) | h[2]; pk.meta = h.slice(4, 8);
+    pk.hdrFix = { corrected: r.corrected, erasures: r.erasures };
+    pk.layout = blockLayout(pk.len);
+    pk.payload = new Uint8Array(pk.len);
+    pk.phase = 'data';
+    this.on({ type: 'header', ptype: pk.type, len: pk.len, meta: pk.meta, nBlocks: pk.layout.blocks.length,
+              corrected: r.corrected, erasures: r.erasures, snrAvg: snr,
+              eta: pk.layout.totalSyms * (this.p.ts + this.p.tg) });
+    if (pk.len === 0) this._finish();
+  }
+  _decodeBlock() {
+    const pk = this.pk, b = pk.layout.blocks[pk.nextBlock];
+    const { bytes, conf } = this._bytes(b.startSym, b.endSym);
+    const r = rsDecodeSoft(bytes, FRAME.blkPar, conf, (cw) =>
+      crc16(cw, 0, b.dlen) === ((cw[b.dlen] << 8) | cw[b.dlen + 1]));
+    const snrs = pk.snr.slice(b.startSym, b.endSym);
+    const info = { index: pk.nextBlock, ok: !!r, corrected: r ? r.corrected : null, erasures: r ? r.erasures : null,
+                   snrAvg: avg(snrs), snrMin: Math.min(...snrs) };
+    if (r) pk.payload.set(r.cw.slice(0, b.dlen), b.off);
+    pk.blocks.push(info);
+    this.on(Object.assign({ type: 'block', nBlocks: pk.layout.blocks.length, off: b.off, dlen: b.dlen,
+                            data: r ? Uint8Array.from(r.cw.slice(0, b.dlen)) : null }, info));
+    pk.nextBlock++;
+    if (pk.nextBlock === pk.layout.blocks.length) this._finish();
+  }
+  _finish() {
+    const pk = this.pk;
+    const ok = pk.blocks.filter(b => b.ok).length;
+    this.on({ type: 'packet', ptype: pk.type, len: pk.len, meta: pk.meta, payload: pk.payload,
+              blocksOk: ok, nBlocks: pk.blocks.length, blocks: pk.blocks, ncc: pk.ncc, hdr: pk.hdrFix,
+              snrAvg: avg(pk.snr), snrMin: Math.min(...pk.snr),
+              corrected: pk.blocks.reduce((s, b) => s + (b.corrected || 0), 0),
+              erasures: pk.blocks.reduce((s, b) => s + (b.erasures || 0), 0) });
+    this.cursor = Math.round(pk.dataStart + pk.syms.length * this.p.slot);
+    this.state = 'search'; this.pk = null;
+  }
+}
+const avg = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+
+// ---------------------------------------------------------------- test helpers
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+/** Crude acoustic channel: delay, echoes, clock-rate offset (ppm), white noise at wideband SNR (dB). */
+function simulateChannel(sig, fs, o = {}) {
+  const rnd = mulberry32(o.seed ?? 1);
+  const delay = Math.round((o.delay ?? 0.3) * fs);
+  const echoes = o.echoes ?? [[0.007, 0.35], [0.019, 0.2], [0.041, 0.1]];
+  const ratio = 1 + (o.ppm ?? 0) * 1e-6;
+  const n = Math.ceil((sig.length + delay) / ratio) + Math.round(0.3 * fs);
+  const y = new Float32Array(sig.length + delay + Math.round(0.1 * fs));
+  for (let i = 0; i < sig.length; i++) y[i + delay] += sig[i];
+  for (const [d, g] of echoes) { const k = Math.round(d * fs); for (let i = 0; i < sig.length && i + delay + k < y.length; i++) y[i + delay + k] += g * sig[i]; }
+  let pw = 0, cnt = 0; for (let i = 0; i < sig.length; i++) if (sig[i] !== 0) { pw += sig[i] * sig[i]; cnt++; }
+  pw /= Math.max(1, cnt);
+  const sigma = Math.sqrt(pw / Math.pow(10, (o.snrDb ?? 0) / 10));
+  const out = new Float32Array(n), H = 16, PH = 256;       // polyphase windowed-sinc resampler (flat to ~0.45 fs)
+  if (!simulateChannel.tbl) {
+    const tbl = new Float32Array((PH + 1) * 2 * H);
+    for (let ph = 0; ph <= PH; ph++) for (let j = -H + 1; j <= H; j++) {
+      const x = j - ph / PH, w = 0.42 + 0.5 * Math.cos(Math.PI * x / H) + 0.08 * Math.cos(2 * Math.PI * x / H);
+      tbl[ph * 2 * H + j + H - 1] = (Math.abs(x) < 1e-9 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x)) * w;
+    }
+    simulateChannel.tbl = tbl;
+  }
+  const tbl = simulateChannel.tbl;
+  for (let i = 0; i < n; i++) {
+    const t = i * ratio, k = Math.floor(t), f = t - k;
+    let v = 0;
+    if (ratio === 1) v = k < y.length ? y[k] : 0;
+    else {
+      const base = Math.round(f * PH) * 2 * H;
+      for (let j = -H + 1; j <= H; j++) {
+        const idx = k + j; if (idx >= 0 && idx < y.length) v += y[idx] * tbl[base + j + H - 1];
+      }
+    }
+    const g = Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+    let lf = 0;
+    if (o.hum) lf = o.hum * (Math.sin(2 * Math.PI * 120 * i / fs) + 0.6 * Math.sin(2 * Math.PI * 340 * i / fs + 1) + 0.4 * Math.sin(2 * Math.PI * 900 * i / fs));
+    out[i] = v + sigma * g + lf;
+  }
+  return out;
+}
+function encodeWav(samples, fs) {
+  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, fs, true);
+  v.setUint32(28, fs * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data');
+  v.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 32767, true);
+  return buf;
+}
+
+root.Modem = { NTONES, BANDS, SPEEDS, FRAME, TYPE, HDR_SYMS, makeParams, rsEncode, rsDecode, rsDecodeSoft, crc16,
+  fft, makeChirp, blockLayout, buildFrame, bytesToSymbols, synthesize, airtime, Receiver, simulateChannel, encodeWav };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(() => {
+'use strict';
+const M = window.Modem;
+const $ = (id) => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder('utf-8', { fatal: false });
+
+// ------------------------------------------------------------ settings
+for (const [k, b] of Object.entries(M.BANDS)) $('band').add(new Option(b.name, k));
+for (const [k, s] of Object.entries(M.SPEEDS)) $('speed').add(new Option(s.name, k));
+$('speed').value = 'standard';
+try { const s = JSON.parse(localStorage.getItem('amodem') || '{}'); if (s.band) $('band').value = s.band; if (s.speed) $('speed').value = s.speed; } catch (e) {}
+if (!window.isSecureContext) $('secureWarn').classList.remove('hide');
+
+let ctx = null;
+const fsNow = () => (ctx ? ctx.sampleRate : 48000);
+const params = (fs) => M.makeParams($('band').value, $('speed').value, fs || fsNow());
+
+function showParams() {
+  const p = params(), F = M.FRAME;
+  const net = p.rawBps * F.blkData / (F.blkData + 2 + F.blkPar);
+  $('paramsInfo').textContent =
+    `16-MFSK · tones ${p.tones[0]}–${p.tones[15]} Hz @ ${p.spacing} Hz · chirp ${p.chirpF0}→${p.chirpF1} Hz / ${F.chirpDur * 1000} ms\n` +
+    `symbol ${(p.ts * 1000).toFixed(0)} ms + guard ${(p.tg * 1000).toFixed(0)} ms = ${p.baud.toFixed(1)} baud · ${p.rawBps.toFixed(0)} bps raw · ~${net.toFixed(0)} bps net\n` +
+    `FEC: RS(${F.blkData + 2 + F.blkPar},${F.blkData + 2}) per block + CRC-16 · header RS(${F.hdrInfo + F.hdrPar},${F.hdrInfo})`;
+  updateTxInfo();
+  try { localStorage.setItem('amodem', JSON.stringify({ band: $('band').value, speed: $('speed').value })); } catch (e) {}
+}
+$('band').onchange = $('speed').onchange = () => { showParams(); if (rxRunning) restartReceiver(); };
+
+// ------------------------------------------------------------ tabs
+function tab(which) {
+  $('tabTx').classList.toggle('on', which === 'tx'); $('tabRx').classList.toggle('on', which === 'rx');
+  $('txPanel').classList.toggle('hide', which !== 'tx'); $('rxPanel').classList.toggle('hide', which !== 'rx');
+  if (which === 'rx') resizeCanvases();
+}
+$('tabTx').onclick = () => tab('tx'); $('tabRx').onclick = () => tab('rx');
+
+async function ensureCtx() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  if (ctx.state === 'suspended') await ctx.resume();
+  return ctx;
+}
+
+// ------------------------------------------------------------ TX
+function txPayload() {
+  let b = enc.encode($('txText').value);
+  if (b.length > M.FRAME.maxText) b = b.slice(0, M.FRAME.maxText);
+  return b;
+}
+function updateTxInfo() {
+  const raw = enc.encode($('txText').value).length, b = Math.min(raw, M.FRAME.maxText), p = params();
+  const nb = M.blockLayout(b).blocks.length;
+  $('txInfo').innerHTML = `${raw} / ${M.FRAME.maxText} bytes${raw > M.FRAME.maxText ? ' <span class="bad">(truncated)</span>' : ''} · ${nb} block${nb === 1 ? '' : 's'} · airtime ≈ ${M.airtime(p, b).toFixed(1)} s`;
+}
+$('txText').oninput = updateTxInfo;
+$('vol').oninput = () => $('volV').textContent = (+$('vol').value).toFixed(2);
+
+let txSrc = null, txTimer = null, txAnim = null, stopRequested = false;
+async function transmit() {
+  await ensureCtx();
+  const p = params(), payload = txPayload(), frame = M.buildFrame(M.TYPE.TEXT, payload);
+  const sig = M.synthesize(p, frame, +$('vol').value);
+  const buf = ctx.createBuffer(1, sig.length, p.fs); buf.getChannelData(0).set(sig);
+  txSrc = ctx.createBufferSource(); txSrc.buffer = buf; txSrc.connect(ctx.destination);
+  const t0 = ctx.currentTime, dur = sig.length / p.fs;
+  txSrc.start();
+  $('btnSend').disabled = true; $('btnStopTx').disabled = false;
+  $('txOut').textContent = `Sending ${payload.length} B (${frame.length} B on air) at ${p.fs} Hz, ${dur.toFixed(1)} s…`;
+  cancelAnimationFrame(txAnim);
+  const tick = () => { $('txBar').style.width = Math.min(100, (ctx.currentTime - t0) / dur * 100) + '%'; if (txSrc) txAnim = requestAnimationFrame(tick); };
+  tick();
+  txSrc.onended = () => {
+    txSrc = null; $('txBar').style.width = '100%';
+    if ($('repeat').checked && !stopRequested) { txTimer = setTimeout(transmit, +$('repeatGap').value * 1000); $('txOut').textContent += ' done, repeating…'; }
+    else { $('btnSend').disabled = false; $('btnStopTx').disabled = true; $('txOut').textContent += ' done.'; }
+  };
+}
+$('btnSend').onclick = () => { stopRequested = false; transmit().catch(e => $('txOut').textContent = 'Error: ' + e.message); };
+$('btnStopTx').onclick = () => {
+  stopRequested = true; clearTimeout(txTimer);
+  if (txSrc) { try { txSrc.stop(); } catch (e) {} }
+  $('btnSend').disabled = false; $('btnStopTx').disabled = true;
+};
+$('btnWav').onclick = () => {
+  const p = params(48000);
+  const sig = M.synthesize(p, M.buildFrame(M.TYPE.TEXT, txPayload()), +$('vol').value);
+  download(new Blob([M.encodeWav(sig, 48000)], { type: 'audio/wav' }), `amodem_${p.bandKey}_${p.speedKey}.wav`);
+};
+$('btnSelfTest').onclick = () => {
+  $('txOut').textContent = 'Running simulated channel tests…';
+  setTimeout(() => {
+    const p = params(48000), payload = txPayload();
+    const sig = M.synthesize(p, M.buildFrame(M.TYPE.TEXT, payload), 0.7);
+    const lines = [];
+    for (const [snr, ppm] of [[0, 50], [-8, 120], [-12, 150], [-15, 200]]) {
+      const rxs = M.simulateChannel(sig, 48000, { snrDb: snr, ppm, hum: 1, seed: Math.floor(Math.random() * 1e9) });
+      let pk = null; const R = new M.Receiver(p, { onEvent: e => { if (e.type === 'packet') pk = e; } });
+      for (let i = 0; i < rxs.length; i += 2048) R.push(rxs.subarray(i, i + 2048));
+      const good = pk && pk.blocksOk === pk.nBlocks && dec.decode(pk.payload) === dec.decode(payload);
+      lines.push(`${String(snr).padStart(4)} dB wideband, ${ppm} ppm drift, echoes + hum → ${good ? 'PASS' : 'FAIL'}` +
+        (pk ? `  (symbol SNR ${pk.snrAvg.toFixed(1)} dB, RS fixed ${pk.corrected} B, ${pk.blocksOk}/${pk.nBlocks} blocks)` : '  (no sync / header)'));
+    }
+    $('txOut').textContent = lines.join('\n');
+  }, 30);
+};
+
+// ------------------------------------------------------------ RX
+let rxRunning = false, stream = null, srcNode = null, tapNode = null, sinkNode = null, analyser = null, rx = null, raf = null;
+let peakNcc = 0, logEntries = [], current = null;
+
+function log(msg, cls, data) {
+  const line = document.createElement('div'); if (cls) line.className = cls;
+  line.textContent = `${new Date().toLocaleTimeString()}  ${msg}`; $('log').appendChild(line); $('log').scrollTop = 1e9;
+  if (data) logEntries.push(Object.assign({ t: new Date().toISOString() }, data));
+}
+const fmt = (x) => (x == null || !isFinite(x) ? '—' : x.toFixed(1));
+function onEvent(e) {
+  if (e.type === 'sync') {
+    log(`chirp sync  NCC=${e.ncc.toFixed(3)}`, 'dim', { event: 'sync', ncc: +e.ncc.toFixed(4) });
+  } else if (e.type === 'header_fail') {
+    log(`header FAILED (NCC ${e.ncc.toFixed(2)}, symbol SNR avg ${fmt(e.snrAvg)} / min ${fmt(e.snrMin)} dB)`, 'bad',
+        { event: 'header_fail', ncc: +e.ncc.toFixed(4), snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2) });
+  } else if (e.type === 'header') {
+    log(`header OK: ${e.ptype === 0 ? 'TEXT' : 'IMAGE'} ${e.len} B, ${e.nBlocks} blocks, ETA ${e.eta.toFixed(1)} s (RS fixed ${e.corrected}, erasures ${e.erasures})`, 'ok',
+        { event: 'header', ptype: e.ptype, len: e.len, corrected: e.corrected, erasures: e.erasures, snrAvg: +e.snrAvg.toFixed(2) });
+    const first = $('msgs').firstElementChild;
+    if (first && first.classList.contains('dim')) $('msgs').innerHTML = '';
+    current = { parts: new Array(e.nBlocks).fill(null), el: document.createElement('div') };
+    current.el.className = 'msg partial';
+    current.el.innerHTML = '<div class="body"></div><div class="meta">receiving…</div>';
+    $('msgs').prepend(current.el);
+  } else if (e.type === 'block') {
+    log(`  block ${e.index + 1}/${e.nBlocks} ${e.ok ? 'OK' : 'FAILED'}  SNR ${fmt(e.snrAvg)}/${fmt(e.snrMin)} dB${e.ok ? `  fixed ${e.corrected}, erased ${e.erasures}` : ''}`, e.ok ? '' : 'bad',
+        { event: 'block', index: e.index, ok: e.ok, corrected: e.corrected, erasures: e.erasures, snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2) });
+    if (current) {   // progressive render; a lost block shows as '?' characters
+      current.parts[e.index] = e.ok ? e.data : new Uint8Array(e.dlen).fill(0x3f);
+      current.el.querySelector('.body').textContent = dec.decode(concat(current.parts.filter(Boolean)));
+      current.el.querySelector('.meta').textContent = `receiving… ${e.index + 1}/${e.nBlocks} blocks`;
+    }
+  } else if (e.type === 'packet') {
+    const good = e.blocksOk === e.nBlocks;
+    $('mSnr').textContent = `${fmt(e.snrAvg)} / ${fmt(e.snrMin)} dB`;
+    $('mBlk').innerHTML = `<span class="${good ? 'ok' : 'bad'}">${e.blocksOk}/${e.nBlocks}</span> / ${e.corrected}`;
+    const text = dec.decode(e.payload);
+    log(`packet ${good ? 'COMPLETE' : 'PARTIAL'}: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`, good ? 'ok' : 'warn', {
+      event: 'packet', ok: good, len: e.len, blocksOk: e.blocksOk, nBlocks: e.nBlocks, ncc: +e.ncc.toFixed(4),
+      snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2), corrected: e.corrected, erasures: e.erasures, text });
+    if (current) {
+      current.el.className = 'msg' + (good ? '' : ' partial');
+      current.el.querySelector('.meta').textContent =
+        `${new Date().toLocaleTimeString()} · ${e.len} B · ${e.blocksOk}/${e.nBlocks} blocks · symbol SNR ${fmt(e.snrAvg)} dB (min ${fmt(e.snrMin)}) · RS fixed ${e.corrected} B · sync ${e.ncc.toFixed(2)}`;
+    }
+    current = null;
+  }
+}
+function concat(arrs) { const n = arrs.reduce((s, a) => s + a.length, 0), o = new Uint8Array(n); let k = 0; for (const a of arrs) { o.set(a, k); k += a.length; } return o; }
+
+function makeReceiver(fs) { rx = new M.Receiver(params(fs), { threshold: +$('thr').value, onEvent }); $('mFs').textContent = `${fs} Hz`; }
+function restartReceiver() { makeReceiver(ctx.sampleRate); log(`receiver reset: ${$('band').value} / ${$('speed').value}`, 'dim'); }
+$('thr').oninput = () => { $('thrV').textContent = (+$('thr').value).toFixed(2); if (rx) rx.threshold = +$('thr').value; };
+
+const WORKLET = `class Tap extends AudioWorkletProcessor {
+  constructor(){ super(); this.b = new Float32Array(2048); this.n = 0; }
+  process(inputs){ const ch = inputs[0] && inputs[0][0]; if (ch) { for (let i=0;i<ch.length;i++){ this.b[this.n++] = ch[i]; if (this.n === this.b.length){ this.port.postMessage(this.b); this.b = new Float32Array(2048); this.n = 0; } } } return true; }
+} registerProcessor('amodem-tap', Tap);`;
+
+async function startListening() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('getUserMedia unavailable (needs HTTPS or localhost)');
+  await ensureCtx();
+  stream = await navigator.mediaDevices.getUserMedia({ audio: {
+    echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  srcNode = ctx.createMediaStreamSource(stream);
+  analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; analyser.minDecibels = -140; analyser.maxDecibels = 0;
+  srcNode.connect(analyser);
+  sinkNode = ctx.createGain(); sinkNode.gain.value = 0; sinkNode.connect(ctx.destination);
+  makeReceiver(ctx.sampleRate);
+  try {
+    const url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }));
+    await ctx.audioWorklet.addModule(url);
+    tapNode = new AudioWorkletNode(ctx, 'amodem-tap');
+    tapNode.port.onmessage = (ev) => { if (rx) rx.push(ev.data); };
+  } catch (err) {                       // fallback for browsers without AudioWorklet
+    tapNode = ctx.createScriptProcessor(4096, 1, 1);
+    tapNode.onaudioprocess = (ev) => { if (rx) rx.push(new Float32Array(ev.inputBuffer.getChannelData(0))); };
+    log('AudioWorklet unavailable, using ScriptProcessor fallback', 'warn');
+  }
+  srcNode.connect(tapNode); tapNode.connect(sinkNode);
+  const track = stream.getAudioTracks()[0], st = track.getSettings ? track.getSettings() : {};
+  log(`listening · ctx ${ctx.sampleRate} Hz · mic ${st.sampleRate || '?'} Hz · AEC=${st.echoCancellation} NS=${st.noiseSuppression} AGC=${st.autoGainControl}`, '',
+      { event: 'start', fs: ctx.sampleRate, mic: st, band: $('band').value, speed: $('speed').value, ua: navigator.userAgent });
+  if (st.echoCancellation || st.noiseSuppression || st.autoGainControl) log('⚠ browser kept some mic processing ON, which may hurt ultrasonic reception', 'warn');
+  rxRunning = true; $('btnListen').disabled = true; $('btnStopRx').disabled = false;
+  peakNcc = 0; resizeCanvases(); draw();
+}
+function stopListening() {
+  rxRunning = false; cancelAnimationFrame(raf);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  [srcNode, tapNode, sinkNode, analyser].forEach(n => { try { n && n.disconnect(); } catch (e) {} });
+  stream = srcNode = tapNode = sinkNode = analyser = null;
+  $('btnListen').disabled = false; $('btnStopRx').disabled = true; $('mState').textContent = 'idle';
+  log('stopped', 'dim');
+}
+$('btnListen').onclick = () => startListening().catch(e => log('Mic error: ' + e.message, 'bad'));
+$('btnStopRx').onclick = stopListening;
+
+// ------------------------------------------------------------ visualizer
+const spec = $('spec'), wf = $('wf'), sctx = spec.getContext('2d'), wctx = wf.getContext('2d');
+let fbuf = null;
+function resizeCanvases() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  for (const c of [spec, wf]) { const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } }
+}
+window.addEventListener('resize', resizeCanvases);
+function viewRange(p) {
+  if (!$('zoom').checked) return [0, p.fs / 2];
+  return [Math.max(0, p.chirpF0 - 800), Math.min(p.fs / 2, p.chirpF1 + 800)];
+}
+function color(v) { // 0..1 → navy → cyan → yellow
+  v = Math.max(0, Math.min(1, v));
+  const r = v < 0.5 ? 0 : (v - 0.5) * 2 * 255, g = v < 0.25 ? 0 : v < 0.75 ? (v - 0.25) * 2 * 255 : 255, b = v < 0.5 ? 60 + v * 2 * 195 : (1 - v) * 2 * 255;
+  return [r | 0, g | 0, b | 0];
+}
+function binMax(f0, f1, binHz, n) {
+  const b0 = Math.floor(f0 / binHz), b1 = Math.max(b0 + 1, Math.floor(f1 / binHz));
+  let m = -200; for (let b = b0; b < b1 && b < n; b++) m = Math.max(m, fbuf[b]); return m;
+}
+function draw() {
+  if (!rxRunning || !analyser) return;
+  raf = requestAnimationFrame(draw);
+  const p = rx.p, n = analyser.frequencyBinCount, binHz = p.fs / analyser.fftSize;
+  if (!fbuf || fbuf.length !== n) fbuf = new Float32Array(n);
+  analyser.getFloatFrequencyData(fbuf);
+  const [f0, f1] = viewRange(p), W = spec.width, H = spec.height, lo = +$('floor').value, hi = -20;
+  const f2x = (f) => (f - f0) / (f1 - f0) * W;
+  // spectrum with band shading and tone markers
+  sctx.fillStyle = '#05070a'; sctx.fillRect(0, 0, W, H);
+  sctx.fillStyle = 'rgba(76,194,255,0.07)'; sctx.fillRect(f2x(p.chirpF0), 0, f2x(p.chirpF1) - f2x(p.chirpF0), H);
+  sctx.strokeStyle = 'rgba(76,194,255,0.35)'; sctx.lineWidth = 1;
+  for (const f of p.tones) { const x = f2x(f); sctx.beginPath(); sctx.moveTo(x, 0); sctx.lineTo(x, H); sctx.stroke(); }
+  sctx.fillStyle = '#8b95a5'; sctx.font = `${Math.round(H / 14)}px ui-monospace, monospace`;
+  for (let k = 0; k <= 4; k++) { const f = f0 + (f1 - f0) * k / 4; sctx.fillText((f / 1000).toFixed(1) + 'k', Math.min(W - 44, f2x(f) + 2), H - 4); }
+  sctx.strokeStyle = '#e6e9ef'; sctx.beginPath();
+  for (let x = 0; x < W; x++) {
+    const m = binMax(f0 + (f1 - f0) * x / W, f0 + (f1 - f0) * (x + 1) / W, binHz, n);
+    const y = H - (m - lo) / (hi - lo) * H; x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
+  }
+  sctx.stroke();
+  // waterfall (newest row on top)
+  const WW = wf.width, WH = wf.height;
+  wctx.drawImage(wf, 0, 0, WW, WH - 1, 0, 1, WW, WH - 1);
+  const row = wctx.createImageData(WW, 1);
+  for (let x = 0; x < WW; x++) {
+    const [r, g, b] = color((binMax(f0 + (f1 - f0) * x / WW, f0 + (f1 - f0) * (x + 1) / WW, binHz, n) - lo) / (hi - lo));
+    row.data[x * 4] = r; row.data[x * 4 + 1] = g; row.data[x * 4 + 2] = b; row.data[x * 4 + 3] = 255;
+  }
+  wctx.putImageData(row, 0, 0);
+  // metrics
+  const vals = []; let pk = -200;
+  for (let b = Math.floor(p.chirpF0 / binHz); b <= Math.ceil(p.chirpF1 / binHz) && b < n; b++) { vals.push(fbuf[b]); pk = Math.max(pk, fbuf[b]); }
+  vals.sort((a, b) => a - b);
+  $('mBand').textContent = `${(pk - vals[vals.length >> 1]).toFixed(1)} dB`;
+  peakNcc = Math.max(peakNcc * 0.995, rx.lastNcc);
+  $('mNcc').innerHTML = `${rx.lastNcc.toFixed(2)} / <span class="${peakNcc >= rx.threshold ? 'ok' : ''}">${peakNcc.toFixed(2)}</span>`;
+  const pr = rx.progress();
+  $('mState').textContent = pr ? (pr.phase === 'header' ? 'header…' : 'receiving') : 'searching';
+  $('rxBar').style.width = pr ? (pr.got / pr.need * 100) + '%' : '0%';
+}
+
+// ------------------------------------------------------------ RX tools
+function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+$('btnLog').onclick = () => {
+  const p = rx ? rx.p : params();
+  const out = { app: 'amodem-phase1', exported: new Date().toISOString(), ua: navigator.userAgent,
+    params: { band: p.bandKey, speed: p.speedKey, fs: p.fs, tones: [p.tones[0], p.tones[15]], ts: p.ts, tg: p.tg, threshold: rx ? rx.threshold : null },
+    events: logEntries };
+  download(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), `amodem_log_${Date.now()}.json`);
+};
+$('btnRec').onclick = () => {
+  if (!rx || !rx.total) { log('nothing recorded yet', 'warn'); return; }
+  const n = Math.min(rx.total, Math.round(20 * rx.p.fs)), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = rx.get(rx.total - n + i);
+  let pk = 0; for (const v of out) pk = Math.max(pk, Math.abs(v));
+  log(`saved ${(n / rx.p.fs).toFixed(1)} s raw mic audio (peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS)`, 'dim');
+  download(new Blob([M.encodeWav(out, rx.p.fs)], { type: 'audio/wav' }), `amodem_rx_${rx.p.fs}Hz_${Date.now()}.wav`);
+};
+$('wavIn').onchange = async (ev) => {
+  const f = ev.target.files[0]; if (!f) return;
+  await ensureCtx();
+  try {
+    const ab = await ctx.decodeAudioData(await f.arrayBuffer());
+    const ch = ab.getChannelData(0);
+    log(`decoding file ${f.name} (${ab.duration.toFixed(1)} s @ ${ab.sampleRate} Hz)`, 'dim', { event: 'file', name: f.name });
+    const R = new M.Receiver(params(ab.sampleRate), { threshold: +$('thr').value, onEvent });
+    for (let i = 0; i < ch.length; i += 4096) R.push(ch.subarray(i, i + 4096));
+    R.push(new Float32Array(Math.round(ab.sampleRate * 0.5)));   // flush the search window
+    log(`file decode finished (max sync NCC seen in last window ${R.lastNcc.toFixed(2)})`, 'dim');
+  } catch (e) { log('file decode error: ' + e.message, 'bad'); }
+  ev.target.value = '';
+};
+$('btnClear').onclick = () => { $('log').innerHTML = ''; logEntries = []; $('msgs').innerHTML = '<div class="dim">Nothing yet.</div>'; };
+
+showParams();
+if (location.hash === '#rx') tab('rx');
+})();
+</script>
+</body>
+</html>
