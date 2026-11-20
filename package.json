@@ -1,0 +1,11 @@
+{
+  "name": "acoustic-modem",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Data over sound: text and small images through a speaker and a microphone (Web Audio API).",
+  "scripts": {
+    "test": "node tests/test_link.js && node tests/test_image.js",
+    "test:speeds": "node tests/test_speeds.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
