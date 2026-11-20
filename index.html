@@ -3,118 +3,160 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Acoustic Modem — Phase 1 (Text)</title>
+<title>Acoustic Modem</title>
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0e1116; --card:#171b22; --line:#2a313c; --fg:#e6e9ef; --dim:#8b95a5; --acc:#4cc2ff; --ok:#3ddc84; --bad:#ff5d5d; --warn:#ffc04d; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  header { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
-  header h1 { font-size:17px; margin:0; font-weight:600; }
-  .tabs { display:flex; gap:6px; margin-left:auto; }
-  .tabs button { padding:8px 18px; font-weight:600; }
-  .tabs button.on { background:var(--acc); color:#001826; border-color:var(--acc); }
-  main { max-width:1100px; margin:0 auto; padding:16px; display:grid; gap:14px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; }
-  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:0 0 10px; font-weight:600; }
-  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  label { color:var(--dim); font-size:13px; display:flex; gap:6px; align-items:center; }
-  select, input[type=number], textarea, button { background:#0f1318; color:var(--fg); border:1px solid var(--line); border-radius:7px; padding:7px 10px; font:inherit; }
-  button { cursor:pointer; }
-  button.primary { background:var(--acc); color:#001826; border-color:var(--acc); font-weight:600; }
-  button:disabled { opacity:.45; cursor:default; }
-  textarea { width:100%; min-height:90px; resize:vertical; }
-  .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
-  .params { color:var(--dim); margin-top:8px; white-space:pre-wrap; }
-  canvas { width:100%; display:block; background:#05070a; border-radius:6px; }
-  #spec { height:170px; } #wf { height:240px; margin-top:6px; }
-  .metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:8px; margin-top:10px; }
-  .m { background:#0f1318; border:1px solid var(--line); border-radius:7px; padding:8px 10px; }
-  .m .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
-  .m .v { font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
-  .bar { height:6px; background:#0f1318; border-radius:3px; overflow:hidden; margin-top:8px; }
-  .bar > div { height:100%; width:0; background:var(--acc); transition:width .1s; }
-  .msgs { display:grid; gap:8px; max-height:260px; overflow:auto; }
-  .msg { border-left:3px solid var(--ok); background:#0f1318; padding:8px 10px; border-radius:0 7px 7px 0; white-space:pre-wrap; word-break:break-word; }
-  .msg.partial { border-color:var(--warn); }
-  .msg .meta { color:var(--dim); font-size:11px; margin-top:4px; }
-  pre#log { max-height:220px; overflow:auto; margin:0; background:#0f1318; border:1px solid var(--line); border-radius:7px; padding:8px; white-space:pre-wrap; }
-  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); } .dim { color:var(--dim); }
-  .hide { display:none !important; }
-  .note { font-size:12px; color:var(--dim); }
-  .filebtn { border:1px solid var(--line); padding:7px 10px; border-radius:7px; color:var(--fg); cursor:pointer; }
+  body {
+    max-width: 860px; margin: 0 auto; padding: 24px 18px 60px;
+    font: 16px/1.55 "IBM Plex Serif", Georgia, serif; color: #111; background: #fff;
+  }
+  h1 { font-size: 30px; margin: 0 0 2px; }
+  h2 { font-size: 21px; margin: 36px 0 8px; border-bottom: 1px solid #111; padding-bottom: 3px; }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  p { margin: 8px 0; }
+  a { color: #0645ad; }
+  code, pre, .mono, select, input, button, textarea, table.data { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 13px; }
+  .sub { color: #555; margin: 0; }
+  nav { margin: 14px 0 0; font-family: "IBM Plex Mono", monospace; font-size: 14px; }
+  nav a { margin-right: 14px; }
+  nav a.on { color: #111; font-weight: 600; text-decoration: none; border-bottom: 2px solid #111; }
+
+  fieldset { border: 1px solid #999; padding: 8px 12px 12px; margin: 10px 0; }
+  legend { font-family: "IBM Plex Mono", monospace; font-size: 13px; padding: 0 4px; }
+  label { margin-right: 14px; white-space: nowrap; display: inline-block; margin-top: 6px; }
+  select, input[type=number], textarea { border: 1px solid #888; padding: 4px 6px; background: #fff; color: #111; border-radius: 0; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 80px; resize: vertical; font-size: 14px; }
+  input[type=range] { vertical-align: middle; width: 120px; }
+  button { border: 1px solid #333; background: #eee; padding: 5px 12px; cursor: pointer; margin: 6px 6px 0 0; border-radius: 0; color: #111; }
+  button:hover { background: #ddd; }
+  button.go { background: #111; color: #fff; }
+  button:disabled { color: #999; border-color: #bbb; background: #f5f5f5; cursor: default; }
+
+  figure { margin: 16px 0; }
+  figure canvas { display: block; width: 100%; border: 1px solid #111; background: #fff; }
+  figcaption { font-size: 14px; color: #333; margin-top: 4px; }
+  figcaption b { font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+
+  table.data { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  table.data td, table.data th { border: 1px solid #bbb; padding: 3px 7px; text-align: left; vertical-align: top; }
+  table.data th { background: #f2f2f2; font-weight: 600; white-space: nowrap; }
+  table.status td:first-child { background: #f7f7f7; width: 45%; }
+
+  .hex { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; line-height: 1.7; overflow-x: auto; border: 1px solid #bbb; padding: 6px 8px; min-height: 30px; white-space: pre; }
+  .hex .ok { color: #11602a; } .hex .bad { color: #b00; }
+  .hex mark { background: #ffe36e; color: #111; }
+  .hex s { color: #b00; text-decoration-color: #b00; }
+  .hex .dim { color: #999; }
+  .text-out { border: 1px solid #111; padding: 10px 12px; min-height: 48px; white-space: pre-wrap; word-break: break-word; font-size: 17px; }
+  .text-out .lost, .history .lost { background: #fbd3d3; color: #b00; }
+  .history { font-size: 14px; }
+  .history li { margin: 4px 0; }
+  .history .meta { color: #666; font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+  pre#log { border: 1px solid #bbb; padding: 6px 8px; max-height: 240px; overflow: auto; font-size: 12px; margin: 6px 0; }
+  .ok { color: #11602a; } .bad { color: #b00; } .warn { color: #8a5a00; } .dim { color: #777; }
+  .hide { display: none; }
+  .note { font-size: 14px; color: #444; }
+  .warnbox { border: 1px solid #b00; color: #b00; padding: 6px 10px; font-size: 14px; }
+  progress { width: 100%; height: 10px; }
+  footer { margin-top: 48px; border-top: 1px solid #bbb; padding-top: 8px; font-size: 13px; color: #666; }
+  details summary { cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>🔊 Acoustic Modem <span class="dim">· Phase 1.1 · text</span></h1>
-  <div class="tabs"><button id="tabTx" class="on">Transmit</button><button id="tabRx">Receive</button></div>
-</header>
-<main>
-  <section class="card">
-    <h2>Link settings <span class="dim" style="text-transform:none;letter-spacing:0">(must match on both devices)</span></h2>
-    <div class="row">
-      <label>Band <select id="band"></select></label>
-      <label>Speed <select id="speed"></select></label>
-    </div>
-    <div class="params mono" id="paramsInfo"></div>
-    <div id="secureWarn" class="note bad hide" style="margin-top:8px">⚠ This page is not in a secure context (HTTPS or localhost), so the browser will block the microphone. Transmitting still works.</div>
-  </section>
 
-  <!-- ============================== TX -->
-  <section id="txPanel" class="card">
-    <h2>Transmitter</h2>
-    <textarea id="txText" placeholder="Type a message…">Hello from the acoustic modem 👋</textarea>
-    <div class="row" style="margin-top:8px"><span class="mono" id="txInfo"></span></div>
-    <div class="row" style="margin-top:10px">
-      <label>Volume <input type="range" id="vol" min="0.05" max="1" step="0.05" value="0.7"> <span id="volV" class="mono">0.70</span></label>
-      <label><input type="checkbox" id="repeat"> Repeat every <input type="number" id="repeatGap" value="3" min="1" max="60" style="width:56px"> s</label>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button class="primary" id="btnSend">▶ Transmit</button>
-      <button id="btnStopTx" disabled>■ Stop</button>
-      <button id="btnWav">⬇ Download WAV</button>
-      <button id="btnSelfTest">Self-test (simulated room)</button>
-    </div>
-    <div class="bar"><div id="txBar"></div></div>
-    <pre id="txOut" class="mono dim" style="margin:10px 0 0; white-space:pre-wrap"></pre>
-    <p class="note">Tip: set the device volume to ~70–90%. If you hear crackle or chirping in ultrasonic mode, the speaker is clipping, so lower the volume slider.</p>
-  </section>
+<h1>Acoustic Modem</h1>
+<p class="sub">Sending text through a speaker and back in through a microphone. Phase 1: text link.</p>
+<nav><a href="#tx" id="navTx" class="on">transmit</a><a href="#rx" id="navRx">receive</a><a href="#about">how it works</a></nav>
 
-  <!-- ============================== RX -->
-  <section id="rxPanel" class="card hide">
-    <h2>Receiver</h2>
-    <div class="row">
-      <button class="primary" id="btnListen">🎙 Start listening</button>
-      <button id="btnStopRx" disabled>■ Stop</button>
-      <label>Sync threshold <input type="range" id="thr" min="0.1" max="0.6" step="0.01" value="0.35"> <span id="thrV" class="mono">0.35</span></label>
-      <label><input type="checkbox" id="zoom" checked> Zoom to band</label>
-      <label>Floor <input type="range" id="floor" min="-140" max="-60" step="5" value="-120"></label>
-    </div>
-    <canvas id="spec" style="margin-top:10px"></canvas>
-    <canvas id="wf"></canvas>
-    <div class="metrics">
-      <div class="m"><div class="k">State</div><div class="v" id="mState">idle</div></div>
-      <div class="m"><div class="k">Sample rate</div><div class="v" id="mFs">—</div></div>
-      <div class="m"><div class="k">Sync NCC live / peak · thr</div><div class="v" id="mNcc">—</div></div>
-      <div class="m"><div class="k">In-band peak − floor</div><div class="v" id="mBand">—</div></div>
-      <div class="m"><div class="k">Last pkt symbol SNR avg/min</div><div class="v" id="mSnr">—</div></div>
-      <div class="m"><div class="k">Last pkt blocks / RS fixes</div><div class="v" id="mBlk">—</div></div>
-    </div>
-    <div class="bar"><div id="rxBar"></div></div>
-    <h2 style="margin-top:14px">Received</h2>
-    <div class="msgs" id="msgs"><div class="dim">Nothing yet.</div></div>
-    <h2 style="margin-top:14px">Log</h2>
+<h2>1. Link settings</h2>
+<p class="note">Both devices need the same band and speed.</p>
+<fieldset>
+  <legend>physical layer</legend>
+  <label>band <select id="band"></select></label>
+  <label>speed <select id="speed"></select></label>
+</fieldset>
+<table class="data" id="paramTable"></table>
+<p id="secureWarn" class="warnbox hide">This page isn't on HTTPS or localhost, so the browser will block the microphone. Transmitting still works.</p>
+
+<!-- ======================================================= TX -->
+<section id="txPanel">
+  <h2>2. Transmit</h2>
+  <textarea id="txText">Hello from the acoustic modem</textarea>
+  <p class="mono" id="txInfo"></p>
+  <fieldset>
+    <legend>output</legend>
+    <label>volume <input type="range" id="vol" min="0.05" max="1" step="0.05" value="0.7"> <span id="volV" class="mono">0.70</span></label>
+    <label><input type="checkbox" id="repeat"> repeat every <input type="number" id="repeatGap" value="3" min="1" max="60" style="width:50px"> s</label>
+    <br>
+    <button class="go" id="btnSend">Transmit</button><button id="btnStopTx" disabled>Stop</button><button id="btnWav">Save as WAV</button><button id="btnSelfTest">Run simulated test</button>
+  </fieldset>
+  <progress id="txBar" max="100" value="0"></progress>
+  <figure>
+    <canvas id="txSpec" height="220"></canvas>
+    <figcaption><b>Fig. 1</b> Spectrogram of the signal about to be sent. The diagonal line is the sync chirp, then each short dash is one 4-bit symbol (one of 16 tones). Updates as you type.</figcaption>
+  </figure>
+  <pre id="txOut" class="mono" style="white-space:pre-wrap;margin:0"></pre>
+  <p class="note">Keep the device volume around 70–90%. If the ultrasonic band makes crackling sounds, the speaker is clipping. Turn the volume slider down.</p>
+</section>
+
+<!-- ======================================================= RX -->
+<section id="rxPanel" class="hide">
+  <h2>2. Receive</h2>
+  <fieldset>
+    <legend>input</legend>
+    <button class="go" id="btnListen">Start listening</button><button id="btnStopRx" disabled>Stop</button>
+    <label class="note" style="margin-left:6px"><input type="file" id="wavIn" accept="audio/*,.wav"> decode a recording</label>
+    <br>
+    <label>sync threshold <input type="range" id="thr" min="0.1" max="0.6" step="0.01" value="0.35"> <span id="thrV" class="mono">0.35</span></label>
+    <label><input type="checkbox" id="zoom" checked> zoom to band</label>
+    <label>floor <input type="range" id="floor" min="-140" max="-60" step="5" value="-120"></label>
+  </fieldset>
+
+  <h3>2.1 Signal</h3>
+  <figure>
+    <canvas id="spec" height="160"></canvas>
+    <figcaption><b>Fig. 2</b> Live spectrum from the microphone. Vertical lines mark the 16 data tones, and the shaded area is the chirp's sweep range.</figcaption>
+  </figure>
+  <figure>
+    <canvas id="wf" height="260"></canvas>
+    <figcaption><b>Fig. 3</b> Waterfall (newest at the top). A good packet shows one diagonal chirp followed by a staircase of tones.</figcaption>
+  </figure>
+  <table class="data status">
+    <tr><td>state</td><td id="mState">idle</td></tr>
+    <tr><td>sample rate</td><td id="mFs">-</td></tr>
+    <tr><td>sync NCC (now / peak / threshold)</td><td id="mNcc">-</td></tr>
+    <tr><td>in-band peak above floor</td><td id="mBand">-</td></tr>
+    <tr><td>last packet SNR (avg / min)</td><td id="mSnr">-</td></tr>
+    <tr><td>last packet blocks ok / bytes fixed</td><td id="mBlk">-</td></tr>
+  </table>
+  <progress id="rxBar" max="100" value="0"></progress>
+
+  <h3>2.2 Reconstruction</h3>
+  <figure>
+    <canvas id="symPlot" height="210"></canvas>
+    <figcaption><b>Fig. 4</b> Demodulated symbols for the current packet: which tone (0–15) won each slot. Dark = confident, orange = close call, red = nearly a tie. The gray area is the header, and dashed lines separate the 32-byte blocks. Red shading means a block failed its CRC even after Reed-Solomon correction.</figcaption>
+  </figure>
+  <p class="note" style="margin-bottom:2px">Received bytes per block. <mark style="background:#ffe36e">Highlighted</mark> bytes were wrong on air and fixed by Reed-Solomon. <s class="bad">Struck-through</s> bytes belong to a block that couldn't be recovered.</p>
+  <div class="hex" id="hex"><span class="dim">waiting for a packet...</span></div>
+  <p class="note" style="margin-bottom:2px">Decoded text:</p>
+  <div class="text-out" id="textOut"><span class="dim">-</span></div>
+
+  <h3>2.3 History</h3>
+  <ol class="history" id="msgs" reversed></ol>
+  <details>
+    <summary>event log</summary>
     <pre id="log"></pre>
-    <div class="row" style="margin-top:8px">
-      <button id="btnLog">⬇ Download log (JSON)</button>
-      <button id="btnRec">⬇ Save last 20 s audio (WAV)</button>
-      <label class="filebtn"><input type="file" id="wavIn" accept="audio/*,.wav" style="display:none">📂 Decode audio file…</label>
-      <button id="btnClear">Clear</button>
-    </div>
-    <p class="note">Mic processing (echo cancellation, noise suppression, auto-gain) is requested OFF. Those filters remove ultrasonic tones. Symbol SNR above ~13 dB decodes reliably. Below ~10 dB, expect failed blocks.</p>
-  </section>
-</main>
+  </details>
+  <button id="btnLog">Download log (.json)</button><button id="btnRec">Save last 20 s of audio (.wav)</button><button id="btnClear">Clear</button>
+  <p class="note">The page asks the browser to turn off echo cancellation, noise suppression and auto-gain. Those filters wipe out ultrasonic tones. From testing: symbol SNR above ~13 dB is solid, and below ~10 dB blocks start failing.</p>
+</section>
+
+<h2 id="about">3. How it works</h2>
+<p>Each packet starts with a 100 ms linear chirp. The receiver cross-correlates the mic audio against a copy of that chirp, and the correlation peak gives exact symbol timing. Then come an 18-byte header (type, length, image metadata) and the payload in 32-byte blocks. Every block has a CRC-16 and 12 Reed-Solomon parity bytes, so the receiver can fix up to 6 wrong bytes per block, or up to 12 if it can tell which bytes it's unsure about.</p>
+<p>Each byte becomes two 4-bit symbols, and each symbol is sent as one of 16 tones (16-MFSK). The phase stays continuous between tones, so there are no audible clicks. The receiver skips a short guard interval at the start of every symbol, where room echoes of the previous tone land. It then measures all 16 tones with a Goertzel filter and picks the strongest one.</p>
+<footer>Acoustic modem project · Web Audio API + canvas, no libraries · Phase 1 (text). Next: packetized image transfer.</footer>
 
 <script>
 /* Acoustic modem core — chirp sync, 16-MFSK (continuous phase), RS(255) FEC, CRC-16.
@@ -508,7 +550,7 @@ class Receiver {
     this.pk = { a, ncc, dataStart: a + this.L + this.p.gapLen, syms: [], snr: [], conf: [], phase: 'header',
                 blocks: [], nextBlock: 0, t0: Date.now() };
     this.state = 'packet';
-    this.on({ type: 'sync', sample: a, ncc });
+    this.on({ type: 'sync', sample: a, ncc, pk: this.pk });
   }
   _demod(i) {
     const p = this.p, start = Math.round(this.pk.dataStart + i * p.slot + p.guard);
@@ -559,7 +601,7 @@ class Receiver {
     pk.layout = blockLayout(pk.len);
     pk.payload = new Uint8Array(pk.len);
     pk.phase = 'data';
-    this.on({ type: 'header', ptype: pk.type, len: pk.len, meta: pk.meta, nBlocks: pk.layout.blocks.length,
+    this.on({ type: 'header', ptype: pk.type, len: pk.len, meta: pk.meta, nBlocks: pk.layout.blocks.length, layout: pk.layout,
               corrected: r.corrected, erasures: r.erasures, snrAvg: snr,
               eta: pk.layout.totalSyms * (this.p.ts + this.p.tg) });
     if (pk.len === 0) this._finish();
@@ -570,7 +612,8 @@ class Receiver {
     const r = rsDecodeSoft(bytes, FRAME.blkPar, conf, (cw) =>
       crc16(cw, 0, b.dlen) === ((cw[b.dlen] << 8) | cw[b.dlen + 1]));
     const snrs = pk.snr.slice(b.startSym, b.endSym);
-    const info = { index: pk.nextBlock, ok: !!r, corrected: r ? r.corrected : null, erasures: r ? r.erasures : null,
+    const fixed = []; if (r) for (let i = 0; i < b.dlen; i++) if (bytes[i] !== r.cw[i]) fixed.push(i);
+    const info = { index: pk.nextBlock, ok: !!r, raw: bytes.slice(0, b.dlen), fixed, corrected: r ? r.corrected : null, erasures: r ? r.erasures : null,
                    snrAvg: avg(snrs), snrMin: Math.min(...snrs) };
     if (r) pk.payload.set(r.cw.slice(0, b.dlen), b.off);
     pk.blocks.push(info);
@@ -662,7 +705,7 @@ const enc = new TextEncoder(), dec = new TextDecoder('utf-8', { fatal: false });
 // ------------------------------------------------------------ settings
 for (const [k, b] of Object.entries(M.BANDS)) $('band').add(new Option(b.name, k));
 for (const [k, s] of Object.entries(M.SPEEDS)) $('speed').add(new Option(s.name, k));
-$('speed').value = 'standard';
+$('speed').value = 'fast';                      // best performer in field tests (Nov 2026)
 try { const s = JSON.parse(localStorage.getItem('amodem') || '{}'); if (s.band) $('band').value = s.band; if (s.speed) $('speed').value = s.speed; } catch (e) {}
 if (!window.isSecureContext) $('secureWarn').classList.remove('hide');
 
@@ -673,22 +716,27 @@ const params = (fs) => M.makeParams($('band').value, $('speed').value, fs || fsN
 function showParams() {
   const p = params(), F = M.FRAME;
   const net = p.rawBps * F.blkData / (F.blkData + 2 + F.blkPar);
-  $('paramsInfo').textContent =
-    `16-MFSK · tones ${p.tones[0]}–${p.tones[15]} Hz @ ${p.spacing} Hz · chirp ${p.chirpF0}→${p.chirpF1} Hz / ${F.chirpDur * 1000} ms\n` +
-    `symbol ${(p.ts * 1000).toFixed(0)} ms + guard ${(p.tg * 1000).toFixed(0)} ms = ${p.baud.toFixed(1)} baud · ${p.rawBps.toFixed(0)} bps raw · ~${net.toFixed(0)} bps net\n` +
-    `FEC: RS(${F.blkData + 2 + F.blkPar},${F.blkData + 2}) per block + CRC-16 · header RS(${F.hdrInfo + F.hdrPar},${F.hdrInfo})`;
-  updateTxInfo();
+  const rows = [
+    ['modulation', `16-MFSK, ${p.tones[0]}–${p.tones[15]} Hz, ${p.spacing} Hz spacing`],
+    ['symbol', `${(p.ts * 1000).toFixed(0)} ms integrate + ${(p.tg * 1000).toFixed(0)} ms guard = ${p.baud.toFixed(1)} baud`],
+    ['rate', `${p.rawBps.toFixed(0)} bit/s raw, about ${net.toFixed(0)} bit/s after FEC`],
+    ['sync', `linear chirp ${p.chirpF0} → ${p.chirpF1} Hz, ${F.chirpDur * 1000} ms`],
+    ['FEC', `RS(${F.blkData + 2 + F.blkPar},${F.blkData + 2}) + CRC-16 per block, header RS(${F.hdrInfo + F.hdrPar},${F.hdrInfo})`],
+  ];
+  $('paramTable').innerHTML = rows.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('');
+  updateTxInfo(); scheduleTxPreview();
   try { localStorage.setItem('amodem', JSON.stringify({ band: $('band').value, speed: $('speed').value })); } catch (e) {}
 }
 $('band').onchange = $('speed').onchange = () => { showParams(); if (rxRunning) restartReceiver(); };
 
-// ------------------------------------------------------------ tabs
+// ------------------------------------------------------------ nav
 function tab(which) {
-  $('tabTx').classList.toggle('on', which === 'tx'); $('tabRx').classList.toggle('on', which === 'rx');
+  $('navTx').classList.toggle('on', which === 'tx'); $('navRx').classList.toggle('on', which === 'rx');
   $('txPanel').classList.toggle('hide', which !== 'tx'); $('rxPanel').classList.toggle('hide', which !== 'rx');
-  if (which === 'rx') resizeCanvases();
+  sizeCanvases(); if (which === 'tx') scheduleTxPreview(); else drawSymbols();
 }
-$('tabTx').onclick = () => tab('tx'); $('tabRx').onclick = () => tab('rx');
+function route() { if (location.hash === '#rx') tab('rx'); else if (location.hash === '#tx' || !location.hash) tab('tx'); }
+window.addEventListener('hashchange', route);
 
 async function ensureCtx() {
   if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
@@ -696,19 +744,102 @@ async function ensureCtx() {
   return ctx;
 }
 
-// ------------------------------------------------------------ TX
-function txPayload() {
-  let b = enc.encode($('txText').value);
-  if (b.length > M.FRAME.maxText) b = b.slice(0, M.FRAME.maxText);
-  return b;
+// ------------------------------------------------------------ plotting helpers
+function sizeCanvases() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  for (const c of document.querySelectorAll('canvas')) {
+    if (!c.dataset.h) c.dataset.h = c.getAttribute('height');
+    const w = Math.round(c.clientWidth * dpr), h = Math.round(+c.dataset.h * dpr);
+    c.style.height = c.dataset.h + 'px';
+    if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; c.dataset.dpr = dpr; }
+  }
 }
+window.addEventListener('resize', () => { sizeCanvases(); scheduleTxPreview(); drawSymbols(); });
+// parula-like colormap (the MATLAB default)
+const CMAP = [[0, 53, 42, 135], [0.2, 3, 99, 225], [0.4, 20, 132, 212], [0.6, 56, 185, 158], [0.8, 209, 187, 89], [1, 249, 251, 14]];
+function cmap(v) {
+  v = Math.max(0, Math.min(1, v));
+  for (let i = 1; i < CMAP.length; i++) if (v <= CMAP[i][0]) {
+    const a = CMAP[i - 1], b = CMAP[i], t = (v - a[0]) / (b[0] - a[0]);
+    return [a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2]), a[3] + t * (b[3] - a[3])];
+  }
+  return CMAP[CMAP.length - 1].slice(1);
+}
+function viewRange(p) {
+  if (!$('zoom').checked) return [0, p.fs / 2];
+  return [Math.max(0, p.chirpF0 - 800), Math.min(p.fs / 2, p.chirpF1 + 800)];
+}
+const MARGIN = { l: 44, b: 22, t: 6, r: 8 };
+function plotBox(c) { const d = +c.dataset.dpr || 1; return { d, x0: MARGIN.l * d, y0: MARGIN.t * d, w: c.width - (MARGIN.l + MARGIN.r) * d, h: c.height - (MARGIN.t + MARGIN.b) * d }; }
+function axes(g, c, box, xlab, ylab, xticks, yticks, outside) {
+  const d = box.d;
+  g.strokeStyle = '#111'; g.lineWidth = 1;
+  if (outside) g.strokeRect(box.x0 - 1.5, box.y0 - 1.5, box.w + 3, box.h + 3);   // keep the border out of the scrolling image
+  else g.strokeRect(box.x0 + .5, box.y0 + .5, box.w, box.h);
+  g.fillStyle = '#111'; g.font = `${11 * d}px "IBM Plex Mono", monospace`;
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (const [x, s] of xticks) { g.fillText(s, x, box.y0 + box.h + 4 * d); g.beginPath(); g.moveTo(x, box.y0 + box.h); g.lineTo(x, box.y0 + box.h - 4 * d); g.stroke(); }
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (const [y, s] of yticks) { g.fillText(s, box.x0 - 4 * d, y); g.beginPath(); g.moveTo(box.x0, y); g.lineTo(box.x0 + 4 * d, y); g.stroke(); }
+  g.save(); g.translate(10 * d, box.y0 + box.h / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText(ylab, 0, 0); g.restore();
+  if (xlab) { g.textAlign = 'right'; g.textBaseline = 'bottom'; g.fillText(xlab, box.x0 + box.w - 2 * d, box.y0 + box.h - 2 * d); }
+}
+function freqTicks(box, f0, f1) {
+  const step = (f1 - f0) > 6000 ? 2000 : (f1 - f0) > 2500 ? 500 : 250, out = [];
+  for (let f = Math.ceil(f0 / step) * step; f <= f1; f += step) out.push([box.x0 + (f - f0) / (f1 - f0) * box.w, (f / 1000).toFixed(step < 1000 ? 2 : 0).replace(/\.?0+$/, '') + 'k']);
+  return out;
+}
+
+// ------------------------------------------------------------ TX
+function txPayload() { let b = enc.encode($('txText').value); if (b.length > M.FRAME.maxText) b = b.slice(0, M.FRAME.maxText); return b; }
 function updateTxInfo() {
   const raw = enc.encode($('txText').value).length, b = Math.min(raw, M.FRAME.maxText), p = params();
-  const nb = M.blockLayout(b).blocks.length;
-  $('txInfo').innerHTML = `${raw} / ${M.FRAME.maxText} bytes${raw > M.FRAME.maxText ? ' <span class="bad">(truncated)</span>' : ''} · ${nb} block${nb === 1 ? '' : 's'} · airtime ≈ ${M.airtime(p, b).toFixed(1)} s`;
+  const nb = M.blockLayout(b).blocks.length, onAir = M.buildFrame(0, txPayload()).length;
+  $('txInfo').innerHTML = `${raw}/${M.FRAME.maxText} bytes${raw > M.FRAME.maxText ? ' <span class="bad">(will be cut off)</span>' : ''}, ${nb} block${nb === 1 ? '' : 's'}, ${onAir} bytes on air, about ${M.airtime(p, b).toFixed(1)} s`;
 }
-$('txText').oninput = updateTxInfo;
+let txPrevTimer = null;
+function scheduleTxPreview() { clearTimeout(txPrevTimer); txPrevTimer = setTimeout(drawTxPreview, 250); }
+$('txText').oninput = () => { updateTxInfo(); scheduleTxPreview(); };
 $('vol').oninput = () => $('volV').textContent = (+$('vol').value).toFixed(2);
+$('zoom').onchange = scheduleTxPreview;
+
+function drawTxPreview() {
+  const c = $('txSpec'); if (!c.clientWidth || $('txPanel').classList.contains('hide')) return;
+  sizeCanvases();
+  const fs = 48000, p = params(fs), sig = M.synthesize(p, M.buildFrame(0, txPayload()), 0.7);
+  const N = 1024, hop = 240, frames = Math.max(1, Math.floor((sig.length - N) / hop));
+  const g = c.getContext('2d'), box = plotBox(c), [f0, f1] = viewRange(p), binHz = fs / N;
+  const b0 = Math.floor(f0 / binHz), b1 = Math.ceil(f1 / binHz);
+  const W = Math.round(box.w), H = Math.round(box.h), img = g.createImageData(W, H);
+  const colMax = new Float32Array(W * H).fill(-200);
+  const re = new Float64Array(N), im = new Float64Array(N), win = new Float64Array(N);
+  for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+  for (let fr = 0; fr < frames; fr++) {
+    const x = Math.min(W - 1, Math.floor(fr / frames * W));
+    for (let i = 0; i < N; i++) { re[i] = sig[fr * hop + i] * win[i]; im[i] = 0; }
+    M.fft(re, im, false);
+    for (let b = b0; b <= b1; b++) {
+      const y = H - 1 - Math.floor((b * binHz - f0) / (f1 - f0) * H); if (y < 0 || y >= H) continue;
+      const db = 10 * Math.log10(re[b] * re[b] + im[b] * im[b] + 1e-12);
+      if (db > colMax[y * W + x]) colMax[y * W + x] = db;
+    }
+  }
+  // fill gaps between frequency bins and between frames
+  for (let x = 0; x < W; x++) for (let y = 1; y < H; y++) if (colMax[y * W + x] === -200) colMax[y * W + x] = colMax[(y - 1) * W + x];
+  for (let x = 1; x < W; x++) for (let y = 0; y < H; y++) if (colMax[y * W + x] === -200) colMax[y * W + x] = colMax[y * W + x - 1];
+  for (let i = 0; i < W * H; i++) {
+    const [r, gg, b] = cmap(colMax[i] / 50);
+    img.data[i * 4] = r; img.data[i * 4 + 1] = gg; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = 255;
+  }
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.putImageData(img, box.x0, box.y0);
+  const dur = sig.length / fs, tticks = [];
+  const tstep = dur > 12 ? 2 : dur > 4 ? 1 : 0.5;
+  for (let t = 0; t <= dur; t += tstep) tticks.push([box.x0 + t / dur * box.w, t.toFixed(tstep < 1 ? 1 : 0) + 's']);
+  const fstep = (f1 - f0) > 6000 ? 4000 : 1000, fticks = [];
+  for (let f = Math.ceil(f0 / fstep) * fstep; f <= f1; f += fstep) fticks.push([box.y0 + box.h - (f - f0) / (f1 - f0) * box.h, (f / 1000) + 'k']);
+  axes(g, c, box, 'time', 'Hz', tticks, fticks);
+}
 
 let txSrc = null, txTimer = null, txAnim = null, stopRequested = false;
 async function transmit() {
@@ -720,17 +851,17 @@ async function transmit() {
   const t0 = ctx.currentTime, dur = sig.length / p.fs;
   txSrc.start();
   $('btnSend').disabled = true; $('btnStopTx').disabled = false;
-  $('txOut').textContent = `Sending ${payload.length} B (${frame.length} B on air) at ${p.fs} Hz, ${dur.toFixed(1)} s…`;
+  $('txOut').textContent = `sending ${payload.length} B (${frame.length} B on air) at ${p.fs} Hz, ${dur.toFixed(1)} s ...`;
   cancelAnimationFrame(txAnim);
-  const tick = () => { $('txBar').style.width = Math.min(100, (ctx.currentTime - t0) / dur * 100) + '%'; if (txSrc) txAnim = requestAnimationFrame(tick); };
+  const tick = () => { $('txBar').value = Math.min(100, (ctx.currentTime - t0) / dur * 100); if (txSrc) txAnim = requestAnimationFrame(tick); };
   tick();
   txSrc.onended = () => {
-    txSrc = null; $('txBar').style.width = '100%';
-    if ($('repeat').checked && !stopRequested) { txTimer = setTimeout(transmit, +$('repeatGap').value * 1000); $('txOut').textContent += ' done, repeating…'; }
-    else { $('btnSend').disabled = false; $('btnStopTx').disabled = true; $('txOut').textContent += ' done.'; }
+    txSrc = null; $('txBar').value = 100;
+    if ($('repeat').checked && !stopRequested) { txTimer = setTimeout(transmit, +$('repeatGap').value * 1000); $('txOut').textContent += ' done, repeating'; }
+    else { $('btnSend').disabled = false; $('btnStopTx').disabled = true; $('txOut').textContent += ' done'; }
   };
 }
-$('btnSend').onclick = () => { stopRequested = false; transmit().catch(e => $('txOut').textContent = 'Error: ' + e.message); };
+$('btnSend').onclick = () => { stopRequested = false; transmit().catch(e => $('txOut').textContent = 'error: ' + e.message); };
 $('btnStopTx').onclick = () => {
   stopRequested = true; clearTimeout(txTimer);
   if (txSrc) { try { txSrc.stop(); } catch (e) {} }
@@ -742,73 +873,145 @@ $('btnWav').onclick = () => {
   download(new Blob([M.encodeWav(sig, 48000)], { type: 'audio/wav' }), `amodem_${p.bandKey}_${p.speedKey}.wav`);
 };
 $('btnSelfTest').onclick = () => {
-  $('txOut').textContent = 'Running simulated channel tests…';
+  $('txOut').textContent = 'running simulated room (echoes + hum + clock drift) ...';
   setTimeout(() => {
     const p = params(48000), payload = txPayload();
     const sig = M.synthesize(p, M.buildFrame(M.TYPE.TEXT, payload), 0.7);
-    const lines = [];
+    const lines = ['  SNR(wideband)  drift    result'];
     for (const [snr, ppm] of [[0, 50], [-8, 120], [-12, 150], [-15, 200]]) {
       const rxs = M.simulateChannel(sig, 48000, { snrDb: snr, ppm, hum: 1, seed: Math.floor(Math.random() * 1e9) });
       let pk = null; const R = new M.Receiver(p, { onEvent: e => { if (e.type === 'packet') pk = e; } });
       for (let i = 0; i < rxs.length; i += 2048) R.push(rxs.subarray(i, i + 2048));
       const good = pk && pk.blocksOk === pk.nBlocks && dec.decode(pk.payload) === dec.decode(payload);
-      lines.push(`${String(snr).padStart(4)} dB wideband, ${ppm} ppm drift, echoes + hum → ${good ? 'PASS' : 'FAIL'}` +
-        (pk ? `  (symbol SNR ${pk.snrAvg.toFixed(1)} dB, RS fixed ${pk.corrected} B, ${pk.blocksOk}/${pk.nBlocks} blocks)` : '  (no sync / header)'));
+      lines.push(`  ${String(snr).padStart(4)} dB       ${String(ppm).padStart(3)} ppm  ${good ? 'pass' : 'FAIL'}` +
+        (pk ? `  (symbol SNR ${pk.snrAvg.toFixed(1)} dB, ${pk.corrected} bytes fixed, ${pk.blocksOk}/${pk.nBlocks} blocks)` : '  (no sync)'));
     }
     $('txOut').textContent = lines.join('\n');
   }, 30);
 };
 
-// ------------------------------------------------------------ RX
+// ------------------------------------------------------------ RX state + reconstruction
 let rxRunning = false, stream = null, srcNode = null, tapNode = null, sinkNode = null, analyser = null, rx = null, raf = null;
-let peakNcc = 0, logEntries = [], current = null;
+let peakNcc = 0, logEntries = [];
+let recon = null;   // { pk, layout, blocks[], status, len }
 
 function log(msg, cls, data) {
   const line = document.createElement('div'); if (cls) line.className = cls;
   line.textContent = `${new Date().toLocaleTimeString()}  ${msg}`; $('log').appendChild(line); $('log').scrollTop = 1e9;
-  if (data) logEntries.push(Object.assign({ t: new Date().toISOString() }, rx && data.event !== 'start' ? { band: rx.p.bandKey, speed: rx.p.speedKey, thr: +rx.effThr().toFixed(3), noiseNcc: +rx.noiseNcc.toFixed(3) } : {}, data));
+  if (data) logEntries.push(Object.assign({ t: new Date().toISOString() },
+    rx && data.event !== 'start' ? { band: rx.p.bandKey, speed: rx.p.speedKey, thr: +rx.effThr().toFixed(3), noiseNcc: +rx.noiseNcc.toFixed(3) } : {}, data));
 }
-const fmt = (x) => (x == null || !isFinite(x) ? '—' : x.toFixed(1));
+const fmt = (x) => (x == null || !isFinite(x) ? '-' : x.toFixed(1));
+const hx = (b) => b.toString(16).padStart(2, '0');
+const esc = (s) => s.replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+
 function onEvent(e) {
   if (e.type === 'sync') {
-    log(`chirp sync  NCC=${e.ncc.toFixed(3)}`, 'dim', { event: 'sync', ncc: +e.ncc.toFixed(4) });
+    recon = { pk: e.pk, layout: null, blocks: [], status: 'header', len: 0 };
+    log(`chirp sync, NCC=${e.ncc.toFixed(3)}`, 'dim', { event: 'sync', ncc: +e.ncc.toFixed(4) });
+    renderRecon();
   } else if (e.type === 'header_fail') {
-    log(`header FAILED (NCC ${e.ncc.toFixed(2)}, symbol SNR avg ${fmt(e.snrAvg)} / min ${fmt(e.snrMin)} dB)`, 'bad',
+    if (recon) recon.status = 'header failed';
+    log(`header failed (NCC ${e.ncc.toFixed(2)}, SNR ${fmt(e.snrAvg)}/${fmt(e.snrMin)} dB). Probably a false sync`, 'bad',
         { event: 'header_fail', ncc: +e.ncc.toFixed(4), snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2) });
+    renderRecon(); drawSymbols();
   } else if (e.type === 'header') {
-    log(`header OK: ${e.ptype === 0 ? 'TEXT' : 'IMAGE'} ${e.len} B, ${e.nBlocks} blocks, ETA ${e.eta.toFixed(1)} s (RS fixed ${e.corrected}, erasures ${e.erasures})`, 'ok',
+    if (recon) { recon.layout = e.layout; recon.len = e.len; recon.status = 'receiving'; }
+    log(`header ok: ${e.ptype === 0 ? 'text' : 'image'}, ${e.len} B, ${e.nBlocks} blocks, ${e.eta.toFixed(1)} s (fixed ${e.corrected})`, 'ok',
         { event: 'header', ptype: e.ptype, len: e.len, corrected: e.corrected, erasures: e.erasures, snrAvg: +e.snrAvg.toFixed(2) });
-    const first = $('msgs').firstElementChild;
-    if (first && first.classList.contains('dim')) $('msgs').innerHTML = '';
-    current = { parts: new Array(e.nBlocks).fill(null), el: document.createElement('div') };
-    current.el.className = 'msg partial';
-    current.el.innerHTML = '<div class="body"></div><div class="meta">receiving…</div>';
-    $('msgs').prepend(current.el);
+    renderRecon();
   } else if (e.type === 'block') {
-    log(`  block ${e.index + 1}/${e.nBlocks} ${e.ok ? 'OK' : 'FAILED'}  SNR ${fmt(e.snrAvg)}/${fmt(e.snrMin)} dB${e.ok ? `  fixed ${e.corrected}, erased ${e.erasures}` : ''}`, e.ok ? '' : 'bad',
+    if (recon) recon.blocks[e.index] = e;
+    log(`  block ${e.index + 1}/${e.nBlocks} ${e.ok ? 'ok' : 'FAILED'}, SNR ${fmt(e.snrAvg)}/${fmt(e.snrMin)} dB${e.ok ? `, fixed ${e.corrected}, erased ${e.erasures}` : ''}`, e.ok ? '' : 'bad',
         { event: 'block', index: e.index, ok: e.ok, corrected: e.corrected, erasures: e.erasures, snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2) });
-    if (current) {   // progressive render; a lost block shows as '?' characters
-      current.parts[e.index] = e.ok ? e.data : new Uint8Array(e.dlen).fill(0x3f);
-      current.el.querySelector('.body').textContent = dec.decode(concat(current.parts.filter(Boolean)));
-      current.el.querySelector('.meta').textContent = `receiving… ${e.index + 1}/${e.nBlocks} blocks`;
-    }
+    renderRecon(); drawSymbols();
   } else if (e.type === 'packet') {
-    const good = e.blocksOk === e.nBlocks;
+    const good = e.blocksOk === e.nBlocks, text = dec.decode(e.payload);
+    if (recon) recon.status = good ? 'complete' : 'partial';
     $('mSnr').textContent = `${fmt(e.snrAvg)} / ${fmt(e.snrMin)} dB`;
     $('mBlk').innerHTML = `<span class="${good ? 'ok' : 'bad'}">${e.blocksOk}/${e.nBlocks}</span> / ${e.corrected}`;
-    const text = dec.decode(e.payload);
-    log(`packet ${good ? 'COMPLETE' : 'PARTIAL'}: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`, good ? 'ok' : 'warn', {
+    log(`packet ${good ? 'complete' : 'PARTIAL'}: "${text.slice(0, 60)}${text.length > 60 ? '...' : ''}"`, good ? 'ok' : 'warn', {
       event: 'packet', ok: good, len: e.len, blocksOk: e.blocksOk, nBlocks: e.nBlocks, ncc: +e.ncc.toFixed(4),
       snrAvg: +e.snrAvg.toFixed(2), snrMin: +e.snrMin.toFixed(2), corrected: e.corrected, erasures: e.erasures, text });
-    if (current) {
-      current.el.className = 'msg' + (good ? '' : ' partial');
-      current.el.querySelector('.meta').textContent =
-        `${new Date().toLocaleTimeString()} · ${e.len} B · ${e.blocksOk}/${e.nBlocks} blocks · symbol SNR ${fmt(e.snrAvg)} dB (min ${fmt(e.snrMin)}) · RS fixed ${e.corrected} B · sync ${e.ncc.toFixed(2)}`;
-    }
-    current = null;
+    const li = document.createElement('li');
+    li.innerHTML = `${reconText()}<br><span class="meta">${new Date().toLocaleTimeString()} · ${e.len} B · ${e.blocksOk}/${e.nBlocks} blocks · SNR ${fmt(e.snrAvg)} dB (min ${fmt(e.snrMin)}) · ${e.corrected} B fixed · sync ${e.ncc.toFixed(2)}</span>`;
+    if (!good) li.querySelector('.meta').classList.add('bad');
+    $('msgs').prepend(li);
+    renderRecon(); drawSymbols();
   }
 }
-function concat(arrs) { const n = arrs.reduce((s, a) => s + a.length, 0), o = new Uint8Array(n); let k = 0; for (const a of arrs) { o.set(a, k); k += a.length; } return o; }
+// Text from good blocks; lost blocks become a red run of dots of the right length.
+function reconText() {
+  if (!recon || !recon.layout) return '';
+  let html = '';
+  recon.layout.blocks.forEach((b, i) => {
+    const r = recon.blocks[i]; if (!r) return;
+    html += r.ok ? esc(dec.decode(r.data)) : `<span class="lost">${'·'.repeat(b.dlen)}</span>`;
+  });
+  return html;
+}
+function renderRecon() {
+  if (!recon) return;
+  const lines = [`<span class="dim">status: ${recon.status}${recon.layout ? `, ${recon.len} bytes in ${recon.layout.blocks.length} block(s)` : ''}</span>`];
+  if (recon.layout) recon.layout.blocks.forEach((b, i) => {
+    const r = recon.blocks[i], tag = `B${String(i).padStart(2, '0')} `;
+    if (!r) { lines.push(`<span class="dim">${tag} ...  (waiting)</span>`); return; }
+    const fixed = new Set(r.fixed || []);
+    const st = r.ok ? '<span class="ok">ok  </span>' : '<span class="bad">FAIL</span>';
+    const fx = r.ok ? `fix ${String(r.corrected).padStart(2)}${r.erasures ? ' er ' + r.erasures : ''}` : 'crc bad';
+    for (let half = 0; half < b.dlen; half += 16) {
+    let hex = '', asc = '';
+    for (let k = half; k < Math.min(b.dlen, half + 16); k++) {
+      const v = r.ok ? r.data[k] : r.raw[k], h = hx(v), ch = v >= 32 && v < 127 ? esc(String.fromCharCode(v)) : '.';
+      if (!r.ok) { hex += `<s>${h}</s> `; asc += ch; }
+      else if (fixed.has(k)) { hex += `<mark title="received as ${hx(r.raw[k])}">${h}</mark> `; asc += `<mark>${ch}</mark>`; }
+      else { hex += h + ' '; asc += ch; }
+    }
+    const n = Math.min(16, b.dlen - half);
+    lines.push((half ? ' '.repeat(tag.length + 15) : `${tag}${st} ${fx.padEnd(10)}`) + `| ${hex}${'   '.repeat(16 - n)}| ${asc}`);
+    }
+  });
+  $('hex').innerHTML = lines.join('\n');
+  const t = reconText();
+  $('textOut').innerHTML = t || `<span class="dim">${recon.status === 'header failed' ? 'header failed, not a real packet' : '...'}</span>`;
+}
+
+// Fig. 4: winning tone index per symbol for the current packet
+function drawSymbols() {
+  const c = $('symPlot'); if (!c.clientWidth || $('rxPanel').classList.contains('hide')) return;
+  const g = c.getContext('2d'), box = plotBox(c), d = box.d;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  const pk = recon && recon.pk;
+  const total = recon && recon.layout ? recon.layout.totalSyms : M.HDR_SYMS;
+  const yOf = (t) => box.y0 + box.h - (t + 0.5) / 16 * box.h, xOf = (i) => box.x0 + (i + 0.5) / total * box.w;
+  g.fillStyle = '#e6e6e6'; g.fillRect(box.x0, box.y0, M.HDR_SYMS / total * box.w, box.h);
+  g.font = `${10 * d}px "IBM Plex Mono", monospace`; g.textAlign = 'left'; g.textBaseline = 'top';
+  if (recon && recon.layout) recon.layout.blocks.forEach((b, i) => {
+    const r = recon.blocks[i], x0 = box.x0 + b.startSym / total * box.w, x1 = box.x0 + b.endSym / total * box.w;
+    if (r && !r.ok) { g.fillStyle = '#fbd3d3'; g.fillRect(x0, box.y0, x1 - x0, box.h); }
+    g.strokeStyle = '#888'; g.setLineDash([4 * d, 3 * d]); g.beginPath(); g.moveTo(x0 + .5, box.y0); g.lineTo(x0 + .5, box.y0 + box.h); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#555'; g.fillText('B' + i, x0 + 3 * d, box.y0 + 2 * d);
+  });
+  g.fillStyle = '#555'; g.fillText('hdr', box.x0 + 3 * d, box.y0 + 2 * d);
+  g.strokeStyle = '#efefef'; for (let t = 0; t < 16; t++) { const y = yOf(t); g.beginPath(); g.moveTo(box.x0, y); g.lineTo(box.x0 + box.w, y); g.stroke(); }
+  if (pk) {
+    const n = pk.syms.length, rad = Math.max(1.2 * d, Math.min(3 * d, box.w / total * 0.45));
+    g.strokeStyle = 'rgba(0,0,0,0.15)'; g.beginPath();
+    for (let i = 0; i < n; i++) { const x = xOf(i), y = yOf(pk.syms[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke();
+    for (let i = 0; i < n; i++) {
+      const cf = pk.conf[i];
+      g.fillStyle = cf > 8 ? '#111' : cf > 3 ? '#e07b00' : '#d00000';
+      g.beginPath(); g.arc(xOf(i), yOf(pk.syms[i]), rad, 0, 2 * Math.PI); g.fill();
+    }
+  } else {
+    g.fillStyle = '#999'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `${12 * d}px "IBM Plex Mono", monospace`;
+    g.fillText('no packet yet', box.x0 + box.w / 2, box.y0 + box.h / 2);
+  }
+  const xt = [], step = total > 400 ? 100 : total > 150 ? 50 : 10;
+  for (let i = 0; i <= total; i += step) xt.push([box.x0 + i / total * box.w, String(i)]);
+  axes(g, c, box, 'symbol #', 'tone', xt, [0, 5, 10, 15].map(t => [yOf(t), String(t)]));
+}
 
 function makeReceiver(fs) { rx = new M.Receiver(params(fs), { threshold: +$('thr').value, onEvent }); $('mFs').textContent = `${fs} Hz`; }
 function restartReceiver() { makeReceiver(ctx.sampleRate); log(`receiver reset: ${$('band').value} / ${$('speed').value}`, 'dim', { event: 'reset' }); }
@@ -822,8 +1025,7 @@ const WORKLET = `class Tap extends AudioWorkletProcessor {
 async function startListening() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('getUserMedia unavailable (needs HTTPS or localhost)');
   await ensureCtx();
-  stream = await navigator.mediaDevices.getUserMedia({ audio: {
-    echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
   srcNode = ctx.createMediaStreamSource(stream);
   analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0; analyser.minDecibels = -140; analyser.maxDecibels = 0;
   srcNode.connect(analyser);
@@ -834,18 +1036,18 @@ async function startListening() {
     await ctx.audioWorklet.addModule(url);
     tapNode = new AudioWorkletNode(ctx, 'amodem-tap');
     tapNode.port.onmessage = (ev) => { if (rx) rx.push(ev.data); };
-  } catch (err) {                       // fallback for browsers without AudioWorklet
+  } catch (err) {
     tapNode = ctx.createScriptProcessor(4096, 1, 1);
     tapNode.onaudioprocess = (ev) => { if (rx) rx.push(new Float32Array(ev.inputBuffer.getChannelData(0))); };
     log('AudioWorklet unavailable, using ScriptProcessor fallback', 'warn');
   }
   srcNode.connect(tapNode); tapNode.connect(sinkNode);
   const track = stream.getAudioTracks()[0], st = track.getSettings ? track.getSettings() : {};
-  log(`listening · ctx ${ctx.sampleRate} Hz · mic ${st.sampleRate || '?'} Hz · AEC=${st.echoCancellation} NS=${st.noiseSuppression} AGC=${st.autoGainControl}`, '',
+  log(`listening: ctx ${ctx.sampleRate} Hz, mic ${st.sampleRate || '?'} Hz, AEC=${st.echoCancellation} NS=${st.noiseSuppression} AGC=${st.autoGainControl}`, '',
       { event: 'start', fs: ctx.sampleRate, mic: st, band: $('band').value, speed: $('speed').value, ua: navigator.userAgent });
-  if (st.echoCancellation || st.noiseSuppression || st.autoGainControl) log('⚠ browser kept some mic processing ON, which may hurt ultrasonic reception', 'warn');
+  if (st.echoCancellation || st.noiseSuppression || st.autoGainControl) log('warning: browser left some mic processing on', 'warn');
   rxRunning = true; $('btnListen').disabled = true; $('btnStopRx').disabled = false;
-  peakNcc = 0; resizeCanvases(); draw();
+  peakNcc = 0; frame = 0; sizeCanvases(); draw();
 }
 function stopListening() {
   rxRunning = false; cancelAnimationFrame(raf);
@@ -855,26 +1057,11 @@ function stopListening() {
   $('btnListen').disabled = false; $('btnStopRx').disabled = true; $('mState').textContent = 'idle';
   log('stopped', 'dim');
 }
-$('btnListen').onclick = () => startListening().catch(e => log('Mic error: ' + e.message, 'bad'));
+$('btnListen').onclick = () => startListening().catch(e => log('mic error: ' + e.message, 'bad'));
 $('btnStopRx').onclick = stopListening;
 
-// ------------------------------------------------------------ visualizer
-const spec = $('spec'), wf = $('wf'), sctx = spec.getContext('2d'), wctx = wf.getContext('2d');
-let fbuf = null;
-function resizeCanvases() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  for (const c of [spec, wf]) { const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } }
-}
-window.addEventListener('resize', resizeCanvases);
-function viewRange(p) {
-  if (!$('zoom').checked) return [0, p.fs / 2];
-  return [Math.max(0, p.chirpF0 - 800), Math.min(p.fs / 2, p.chirpF1 + 800)];
-}
-function color(v) { // 0..1 → navy → cyan → yellow
-  v = Math.max(0, Math.min(1, v));
-  const r = v < 0.5 ? 0 : (v - 0.5) * 2 * 255, g = v < 0.25 ? 0 : v < 0.75 ? (v - 0.25) * 2 * 255 : 255, b = v < 0.5 ? 60 + v * 2 * 195 : (1 - v) * 2 * 255;
-  return [r | 0, g | 0, b | 0];
-}
+// ------------------------------------------------------------ live spectrum + waterfall
+let fbuf = null, frame = 0;
 function binMax(f0, f1, binHz, n) {
   const b0 = Math.floor(f0 / binHz), b1 = Math.max(b0 + 1, Math.floor(f1 / binHz));
   let m = -200; for (let b = b0; b < b1 && b < n; b++) m = Math.max(m, fbuf[b]); return m;
@@ -885,41 +1072,49 @@ function draw() {
   const p = rx.p, n = analyser.frequencyBinCount, binHz = p.fs / analyser.fftSize;
   if (!fbuf || fbuf.length !== n) fbuf = new Float32Array(n);
   analyser.getFloatFrequencyData(fbuf);
-  const [f0, f1] = viewRange(p), W = spec.width, H = spec.height, lo = +$('floor').value, hi = -20;
-  const f2x = (f) => (f - f0) / (f1 - f0) * W;
-  // spectrum with band shading and tone markers
-  sctx.fillStyle = '#05070a'; sctx.fillRect(0, 0, W, H);
-  sctx.fillStyle = 'rgba(76,194,255,0.07)'; sctx.fillRect(f2x(p.chirpF0), 0, f2x(p.chirpF1) - f2x(p.chirpF0), H);
-  sctx.strokeStyle = 'rgba(76,194,255,0.35)'; sctx.lineWidth = 1;
-  for (const f of p.tones) { const x = f2x(f); sctx.beginPath(); sctx.moveTo(x, 0); sctx.lineTo(x, H); sctx.stroke(); }
-  sctx.fillStyle = '#8b95a5'; sctx.font = `${Math.round(H / 14)}px ui-monospace, monospace`;
-  for (let k = 0; k <= 4; k++) { const f = f0 + (f1 - f0) * k / 4; sctx.fillText((f / 1000).toFixed(1) + 'k', Math.min(W - 44, f2x(f) + 2), H - 4); }
-  sctx.strokeStyle = '#e6e9ef'; sctx.beginPath();
+  const [f0, f1] = viewRange(p), lo = +$('floor').value, hi = -20;
+  // Fig. 2 spectrum
+  const c = $('spec'), g = c.getContext('2d'), box = plotBox(c), d = box.d;
+  const f2x = (f) => box.x0 + (f - f0) / (f1 - f0) * box.w, db2y = (v) => box.y0 + box.h - (v - lo) / (hi - lo) * box.h;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#eef3fb'; g.fillRect(f2x(p.chirpF0), box.y0, f2x(p.chirpF1) - f2x(p.chirpF0), box.h);
+  g.strokeStyle = '#9db4d8'; g.lineWidth = 1;
+  for (const f of p.tones) { const x = Math.round(f2x(f)) + .5; g.beginPath(); g.moveTo(x, box.y0); g.lineTo(x, box.y0 + box.h); g.stroke(); }
+  g.strokeStyle = '#111'; g.lineWidth = 1.2 * d; g.beginPath();
+  for (let x = 0; x < box.w; x++) {
+    const m = binMax(f0 + (f1 - f0) * x / box.w, f0 + (f1 - f0) * (x + 1) / box.w, binHz, n);
+    const y = Math.max(box.y0, Math.min(box.y0 + box.h, db2y(m)));
+    x ? g.lineTo(box.x0 + x, y) : g.moveTo(box.x0 + x, y);
+  }
+  g.stroke(); g.lineWidth = 1;
+  const yt = []; for (let v = Math.ceil(lo / 20) * 20; v <= hi; v += 20) yt.push([db2y(v), String(v)]);
+  axes(g, c, box, 'freq', 'dB', freqTicks(box, f0, f1), yt);
+  // Fig. 3 waterfall
+  const w = $('wf'), wg = w.getContext('2d'), wb = plotBox(w);
+  const W = Math.round(wb.w), H = Math.round(wb.h);
+  wg.drawImage(w, wb.x0, wb.y0, W, H - 1, wb.x0, wb.y0 + 1, W, H - 1);
+  const row = wg.createImageData(W, 1);
   for (let x = 0; x < W; x++) {
-    const m = binMax(f0 + (f1 - f0) * x / W, f0 + (f1 - f0) * (x + 1) / W, binHz, n);
-    const y = H - (m - lo) / (hi - lo) * H; x ? sctx.lineTo(x, y) : sctx.moveTo(x, y);
+    const [r, gg, b] = cmap((binMax(f0 + (f1 - f0) * x / W, f0 + (f1 - f0) * (x + 1) / W, binHz, n) - lo) / (hi - lo));
+    row.data[x * 4] = r; row.data[x * 4 + 1] = gg; row.data[x * 4 + 2] = b; row.data[x * 4 + 3] = 255;
   }
-  sctx.stroke();
-  // waterfall (newest row on top)
-  const WW = wf.width, WH = wf.height;
-  wctx.drawImage(wf, 0, 0, WW, WH - 1, 0, 1, WW, WH - 1);
-  const row = wctx.createImageData(WW, 1);
-  for (let x = 0; x < WW; x++) {
-    const [r, g, b] = color((binMax(f0 + (f1 - f0) * x / WW, f0 + (f1 - f0) * (x + 1) / WW, binHz, n) - lo) / (hi - lo));
-    row.data[x * 4] = r; row.data[x * 4 + 1] = g; row.data[x * 4 + 2] = b; row.data[x * 4 + 3] = 255;
+  wg.putImageData(row, wb.x0, wb.y0);
+  if (frame++ % 30 === 0) {
+    wg.fillStyle = '#fff'; wg.fillRect(0, 0, wb.x0 - 2, w.height); wg.fillRect(0, wb.y0 + H + 2, w.width, w.height);
+    axes(wg, w, wb, '', 'time', freqTicks(wb, f0, f1), [], true);
   }
-  wctx.putImageData(row, 0, 0);
-  // metrics
+  // status table
   const vals = []; let pk = -200;
   for (let b = Math.floor(p.chirpF0 / binHz); b <= Math.ceil(p.chirpF1 / binHz) && b < n; b++) { vals.push(fbuf[b]); pk = Math.max(pk, fbuf[b]); }
   vals.sort((a, b) => a - b);
   $('mBand').textContent = `${(pk - vals[vals.length >> 1]).toFixed(1)} dB`;
   peakNcc = Math.max(peakNcc * 0.995, rx.lastNcc);
   const et = rx.effThr();
-  $('mNcc').innerHTML = `${rx.lastNcc.toFixed(2)} / <span class="${peakNcc >= et ? 'ok' : ''}">${peakNcc.toFixed(2)}</span> <span class="dim" style="font-size:12px">· ${et.toFixed(2)}</span>`;
+  $('mNcc').innerHTML = `${rx.lastNcc.toFixed(2)} / <span class="${peakNcc >= et ? 'ok' : ''}">${peakNcc.toFixed(2)}</span> / ${et.toFixed(2)}`;
   const pr = rx.progress();
-  $('mState').textContent = pr ? (pr.phase === 'header' ? 'header…' : 'receiving') : 'searching';
-  $('rxBar').style.width = pr ? (pr.got / pr.need * 100) + '%' : '0%';
+  $('mState').textContent = pr ? (pr.phase === 'header' ? 'reading header' : `receiving (${pr.got}/${pr.need} symbols)`) : 'searching for chirp';
+  $('rxBar').value = pr ? pr.got / pr.need * 100 : 0;
+  if (pr && frame % 3 === 0) drawSymbols();
 }
 
 // ------------------------------------------------------------ RX tools
@@ -948,7 +1143,7 @@ $('btnRec').onclick = () => {
   const n = Math.min(rx.total, Math.round(20 * rx.p.fs)), out = new Float32Array(n);
   for (let i = 0; i < n; i++) out[i] = rx.get(rx.total - n + i);
   let pk = 0; for (const v of out) pk = Math.max(pk, Math.abs(v));
-  log(`saved ${(n / rx.p.fs).toFixed(1)} s raw mic audio (peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS)`, 'dim');
+  log(`saved ${(n / rx.p.fs).toFixed(1)} s of raw mic audio (peak ${(20 * Math.log10(pk + 1e-9)).toFixed(1)} dBFS)`, 'dim');
   download(new Blob([M.encodeWav(out, rx.p.fs)], { type: 'audio/wav' }), `amodem_rx_${rx.p.fs}Hz_${Date.now()}.wav`);
 };
 $('wavIn').onchange = async (ev) => {
@@ -957,18 +1152,21 @@ $('wavIn').onchange = async (ev) => {
   try {
     const ab = await ctx.decodeAudioData(await f.arrayBuffer());
     const ch = ab.getChannelData(0);
-    log(`decoding file ${f.name} (${ab.duration.toFixed(1)} s @ ${ab.sampleRate} Hz)`, 'dim', { event: 'file', name: f.name });
+    log(`decoding ${f.name} (${ab.duration.toFixed(1)} s @ ${ab.sampleRate} Hz)`, 'dim', { event: 'file', name: f.name });
     const R = new M.Receiver(params(ab.sampleRate), { threshold: +$('thr').value, onEvent });
     for (let i = 0; i < ch.length; i += 4096) R.push(ch.subarray(i, i + 4096));
-    R.push(new Float32Array(Math.round(ab.sampleRate * 0.5)));   // flush the search window
-    log(`file decode finished (max sync NCC seen in last window ${R.lastNcc.toFixed(2)})`, 'dim');
+    R.push(new Float32Array(Math.round(ab.sampleRate * 0.5)));
+    log('file decode finished', 'dim');
   } catch (e) { log('file decode error: ' + e.message, 'bad'); }
   ev.target.value = '';
 };
-$('btnClear').onclick = () => { $('log').innerHTML = ''; logEntries = []; $('msgs').innerHTML = '<div class="dim">Nothing yet.</div>'; };
+$('btnClear').onclick = () => {
+  $('log').innerHTML = ''; logEntries = []; $('msgs').innerHTML = ''; recon = null;
+  $('hex').innerHTML = '<span class="dim">waiting for a packet...</span>'; $('textOut').innerHTML = '<span class="dim">-</span>'; drawSymbols();
+};
 
 showParams();
-if (location.hash === '#rx') tab('rx');
+route();
 })();
 </script>
 </body>
